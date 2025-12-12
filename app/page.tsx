@@ -42,6 +42,7 @@ export default function Home() {
           <h1 className="max-w-xs text-2xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
             Ready for your first task
           </h1>
+          <a href="/mgx" className="text-blue-600 hover:underline">Go to Dashboard</a>
         </div>
       </main>
     </div>
