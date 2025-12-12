@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TEM Dashboard (MGX Shell)
 
-## Getting Started
+This repo is a Next.js App Router project that includes an initial TEM dashboard shell under `app/mgx/`.
 
-First, run the development server:
+## Local development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Landing page: http://localhost:3000
+- Dashboard shell: http://localhost:3000/mgx
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## MGX dashboard routes
 
-## Learn More
+- `/mgx` – overview
+- `/mgx/tasks` – tasks table
+- `/mgx/tasks/[id]` – task details
+- `/mgx/metrics` – metrics (includes a placeholder chart)
+- `/mgx/results` – results table
 
-To learn more about Next.js, take a look at the following resources:
+Each route includes basic loading/error states.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### `NEXT_PUBLIC_MGX_API_BASE_URL`
 
-## Deploy on Vercel
+Base URL (or base path) for the MGX REST client.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Default: `/api/mgx` (uses built-in mock Next.js route handlers)
+- Examples:
+  - `NEXT_PUBLIC_MGX_API_BASE_URL=http://localhost:4000`
+  - `NEXT_PUBLIC_MGX_API_BASE_URL=https://api.example.com`
+  - `NEXT_PUBLIC_MGX_API_BASE_URL=/api/mgx`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The dashboard expects endpoints like:
+
+- `GET /tasks`
+- `GET /tasks/:id`
+- `GET /metrics`
+- `GET /results`
+
+### `NEXT_PUBLIC_MGX_WS_URL`
+
+WebSocket URL used by `useMgxWebSocket`.
+
+- Default: `ws://localhost:4000/ws`
+
+## Notes
+
+- Reusable dashboard UI primitives live in `components/mgx/` (cards, tables, status pills).
+- Shared data utilities live in `lib/mgx/` (REST client, SWR hooks, WebSocket hook).
