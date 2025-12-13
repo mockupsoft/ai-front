@@ -47,17 +47,17 @@ export default function MgxOverviewPage() {
         <Card>
           <CardHeader>
             <div>
-              <CardTitle>Metrics</CardTitle>
+              <CardTitle>Monitoring</CardTitle>
               <CardDescription>Time series</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold">—</p>
             <Link
-              href="/mgx/metrics"
+              href="/mgx/monitoring"
               className="mt-2 inline-block text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
             >
-              View metrics
+              View monitoring
             </Link>
           </CardContent>
         </Card>
