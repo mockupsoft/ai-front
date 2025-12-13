@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 
 // Mock TextEncoder/TextDecoder for jsdom
-const { TextEncoder, TextDecoder } = require('util');
+import { TextEncoder, TextDecoder } from 'util';
 global.TextEncoder = TextEncoder;
 global.TextDecoder = TextDecoder;
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MetricsDashboard } from '@/components/MetricsDashboard';
 import * as hooks from '@/lib/hooks';
 import * as wsProvider from '@/components/WebSocketProvider';
@@ -12,7 +12,7 @@ jest.mock('recharts', () => {
     const OriginalModule = jest.requireActual('recharts');
     return {
         ...OriginalModule,
-        ResponsiveContainer: ({ children }: any) => <div>{children}</div>,
+        ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     };
 });
 

@@ -15,7 +15,7 @@ jest.mock('next/navigation', () => ({
 
 // Mock syntax highlighter to avoid issues
 jest.mock('react-syntax-highlighter', () => ({
-    Prism: ({ children }: any) => <pre>{children}</pre>
+    Prism: ({ children }: { children: React.ReactNode }) => <pre>{children}</pre>
 }));
 
 const mockTask = {

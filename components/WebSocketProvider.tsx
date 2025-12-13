@@ -7,7 +7,7 @@ import { WebSocketMessage } from '@/lib/types';
 interface WebSocketContextType {
   isConnected: boolean;
   lastMessage: WebSocketMessage | null;
-  sendMessage: (msg: any) => void;
+  sendMessage: (msg: unknown) => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
@@ -17,6 +17,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>(null);
+  const connectRef = useRef<(() => void) | null>(null);
 
   const connect = useCallback(() => {
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws';
@@ -34,12 +35,12 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       // Reconnect logic
       reconnectTimeoutRef.current = setTimeout(() => {
         console.log('Reconnecting WS...');
-        connect();
+        connectRef.current?.();
       }, 3000);
     };
 
-    ws.onerror = (error) => {
-      console.error('WS Error', error);
+    ws.onerror = () => {
+      console.error('WS Error');
       ws.close();
     };
 
@@ -69,6 +70,19 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     wsRef.current = ws;
   }, []);
 
+  // Store the connect function in ref for recursive calls
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
+  const sendMessage = useCallback((msg: unknown) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(msg));
+    } else {
+      console.warn('WS not connected, cannot send message');
+    }
+  }, []);
+
   useEffect(() => {
     connect();
     return () => {
@@ -76,14 +90,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
     };
   }, [connect]);
-
-  const sendMessage = (msg: any) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(msg));
-    } else {
-      console.warn('WS not connected, cannot send message');
-    }
-  };
 
   return (
     <WebSocketContext.Provider value={{ isConnected, lastMessage, sendMessage }}>
