@@ -7,15 +7,63 @@ import { Fragment } from "react";
 import { ChevronRight } from "lucide-react";
 
 import { navigationConfig } from "@/app/mgx/config/navigation";
+import { useWorkspace } from "@/lib/mgx/workspace/workspace-context";
 import { cn } from "@/lib/utils";
 
 export function MgxBreadcrumb({ className }: { className?: string }) {
   const pathname = usePathname();
+  
+  // Safely get workspace context, handle SSR case
+  let currentWorkspace = null;
+  let currentProject = null;
+  let isLoadingWorkspaces = false;
+  let isLoadingProjects = false;
+  
+  try {
+    const { 
+      currentWorkspace: workspace, 
+      currentProject: project, 
+      isLoadingWorkspaces: loadingWS, 
+      isLoadingProjects: loadingProjects 
+    } = useWorkspace();
+    currentWorkspace = workspace;
+    currentProject = project;
+    isLoadingWorkspaces = loadingWS;
+    isLoadingProjects = loadingProjects;
+  } catch (error) {
+    // Context not available (SSR or outside provider)
+    console.debug("Workspace context not available in breadcrumb");
+  }
 
   const allItems = navigationConfig.flatMap((group) => group.items);
 
   const segments = pathname.split("/").filter(Boolean);
   const breadcrumbs = [];
+
+  // Add workspace context to breadcrumbs if available
+  if (currentWorkspace || isLoadingWorkspaces) {
+    breadcrumbs.push({
+      label: (
+        <span className="flex items-center gap-1">
+          <span className="h-3 w-3 rounded bg-zinc-400" />
+          {isLoadingWorkspaces ? "Loading..." : currentWorkspace?.name || "No Workspace"}
+        </span>
+      ),
+      href: "/mgx",
+    });
+
+    if (currentProject || isLoadingProjects) {
+      breadcrumbs.push({
+        label: (
+          <span className="flex items-center gap-1">
+            <span className="h-3 w-3 rounded bg-zinc-300" />
+            {isLoadingProjects ? "Loading..." : currentProject?.name || "No Project"}
+          </span>
+        ),
+        href: "/mgx",
+      });
+    }
+  }
 
   breadcrumbs.push({ label: "Home", href: "/mgx" });
 
@@ -51,7 +99,7 @@ export function MgxBreadcrumb({ className }: { className?: string }) {
         const isLast = index === breadcrumbs.length - 1;
 
         return (
-          <Fragment key={crumb.href}>
+          <Fragment key={typeof crumb.label === "string" ? crumb.label : index}>
             {index > 0 && (
               <ChevronRight className="h-4 w-4 text-zinc-400 dark:text-zinc-600" />
             )}
