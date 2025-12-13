@@ -132,3 +132,69 @@ export async function createTask(name: string, description?: string) {
   if (!res.ok) throw new Error("Failed to create task");
   return res.json();
 }
+
+export async function connectRepository(
+  projectId: string,
+  data: {
+    url: string;
+    branch: string;
+    oauthToken?: string;
+    appInstallId?: string;
+  },
+  options?: ApiRequestOptions
+) {
+  const url = options
+    ? buildScopedUrl(`/projects/${projectId}/repositories/connect`, options)
+    : resolveUrl(`/projects/${projectId}/repositories/connect`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.message || "Failed to connect repository");
+  }
+  return res.json();
+}
+
+export async function disconnectRepository(
+  projectId: string,
+  repositoryId: string,
+  options?: ApiRequestOptions
+) {
+  const url = options
+    ? buildScopedUrl(`/projects/${projectId}/repositories/${repositoryId}`, options)
+    : resolveUrl(`/projects/${projectId}/repositories/${repositoryId}`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers,
+  });
+
+  if (!res.ok) throw new Error("Failed to disconnect repository");
+  return res.json();
+}
+
+export async function refreshRepositoryMetadata(
+  projectId: string,
+  repositoryId: string,
+  options?: ApiRequestOptions
+) {
+  const url = options
+    ? buildScopedUrl(`/projects/${projectId}/repositories/${repositoryId}/refresh`, options)
+    : resolveUrl(`/projects/${projectId}/repositories/${repositoryId}/refresh`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+  });
+
+  if (!res.ok) throw new Error("Failed to refresh repository metadata");
+  return res.json();
+}

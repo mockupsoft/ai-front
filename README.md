@@ -558,6 +558,71 @@ function MyComponent() {
 
 ---
 
+## 🔗 GitHub Repository Connection
+
+The MGX Dashboard includes comprehensive GitHub repository integration for automated branch tracking and metadata sync:
+
+#### Features
+- **Repository Connection**: Connect GitHub repositories with automatic validation
+- **Branch Tracking**: Track specific branches for commits and metadata
+- **Git Metadata Display**: Show branch badges, commit SHA, and PR links in task views
+- **Real-time Updates**: WebSocket events trigger automatic UI updates on git events
+- **OAuth Support**: Support for GitHub OAuth tokens and app installations
+- **Repository Management**: Refresh metadata, disconnect repositories, and view sync status
+
+#### Configuration (`/mgx/settings/git`)
+1. Navigate to **Settings → Git Repository Configuration**
+2. Fill in the Repository URL (e.g., `https://github.com/owner/repo`)
+3. Select the Branch to track (default: `main`)
+4. Optionally provide:
+   - **GitHub OAuth Token**: Personal access token for private repos (scope: `repo`, `read:user`)
+   - **GitHub App Installation ID**: For app-based authentication
+5. Click "Connect Repository"
+
+#### API Integration
+The frontend communicates with these backend endpoints:
+- `GET /api/projects/{projectId}/repositories` - List connected repositories
+- `POST /api/projects/{projectId}/repositories/connect` - Connect a repository
+- `DELETE /api/projects/{projectId}/repositories/{repoId}` - Disconnect a repository
+- `POST /api/projects/{projectId}/repositories/{repoId}/refresh` - Refresh repository metadata
+
+#### WebSocket Events
+The dashboard listens for git-related WebSocket events:
+- `git_metadata_updated` - Repository metadata (branch, commit, PR) updated
+- `git_event` - General git events from the backend
+
+#### Git Metadata in Task Views
+When git metadata is available, tasks display:
+- **Branch Badge**: Current tracked branch (blue)
+- **Commit Badge**: Short commit SHA (purple)
+- **PR Badge**: Pull request link with number (green, clickable)
+
+#### Environment Variables
+- `NEXT_PUBLIC_GITHUB_CLIENT_ID`: (Optional) GitHub OAuth app client ID for app-based auth
+- `NEXT_PUBLIC_MGX_API_BASE_URL`: Backend API for repository endpoints
+
+#### Git Metadata Types
+```typescript
+interface GitMetadata {
+  branch?: string;              // Current branch name
+  commitSha?: string;           // Full commit hash
+  commitMessage?: string;       // Commit message
+  authorName?: string;          // Author name
+  authorEmail?: string;         // Author email
+  prUrl?: string;               // Pull request URL
+  prNumber?: number;            // Pull request number
+  lastSyncTime?: string;        // Last sync timestamp
+}
+```
+
+#### Optimizations
+- **SWR Caching**: Repository lists cached per project with smart invalidation
+- **Optimistic Updates**: UI updates reflect changes immediately
+- **Error Handling**: User-friendly error messages for connection failures
+- **Metadata Refresh**: Manual refresh available to sync latest repository state
+
+---
+
 ## 📚 Documentation
 
 Additional documentation available:

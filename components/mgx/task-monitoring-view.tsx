@@ -18,9 +18,10 @@ import { useWebSocket } from "@/components/WebSocketProvider";
 import { PlanApprovalModal } from "@/components/mgx/plan-approval-modal";
 import { ResultsViewer } from "@/components/mgx/results-viewer";
 import { TaskMonitor } from "@/components/mgx/task-monitor";
+import { GitMetadataBadge } from "@/components/mgx/git-metadata-badge";
 import { AgentChat } from "@/components/AgentChat";
 import { triggerRun } from "@/lib/api";
-import type { RunProgressPayload, TaskPhase, TaskStatus } from "@/lib/types";
+import type { RunProgressPayload, TaskPhase, TaskStatus, GitMetadata } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useRun, useTask } from "@/hooks/useTasks";
 
@@ -91,6 +92,7 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
   const [liveAction, setLiveAction] = React.useState<string | undefined>(undefined);
   const [liveEtaSeconds, setLiveEtaSeconds] = React.useState<number | undefined>(undefined);
   const [liveLogs, setLiveLogs] = React.useState<string[]>([]);
+  const [gitMetadata, setGitMetadata] = React.useState<GitMetadata | undefined>(undefined);
 
   React.useEffect(() => {
     subscribe?.({ taskId, runId: task?.currentRunId });
@@ -111,6 +113,17 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
     ) {
       mutateTask();
       mutateRun();
+    }
+
+    if (lastMessage.type === "git_metadata_updated" || lastMessage.type === "git_event") {
+      const payload = lastMessage.payload as Record<string, unknown>;
+      if (typeof payload === "object" && payload !== null) {
+        setGitMetadata((prev: GitMetadata | undefined) => ({
+          ...prev,
+          ...(payload as GitMetadata),
+        }));
+        toast.success("Git metadata updated");
+      }
     }
 
     if (lastMessage.type !== "run_progress") return;
@@ -163,12 +176,13 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{task.name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
             <span className="tabular-nums">Updated {new Date(task.updatedAt).toLocaleString()}</span>
             <StatusPill variant={pillVariant(task.status)}>{task.status}</StatusPill>
           </div>
+          {gitMetadata && <GitMetadataBadge metadata={gitMetadata} className="mt-2" />}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
