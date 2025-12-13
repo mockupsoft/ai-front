@@ -36,7 +36,9 @@ export interface Metrics {
   timestamp: number;
 }
 
+export type WebSocketMessagePayload = Task | Run | Metrics | { [key: string]: unknown };
+
 export interface WebSocketMessage {
   type: 'plan_ready' | 'run_progress' | 'run_completed' | 'run_failed' | 'metrics_update';
-  payload: any;
+  payload: WebSocketMessagePayload;
 }

@@ -14,7 +14,7 @@ import { Play, CheckCircle } from 'lucide-react';
 
 export function TaskDetail({ taskId }: { taskId: string }) {
   const { task, isLoading: taskLoading, mutate: mutateTask } = useTask(taskId);
-  const { run, isLoading: runLoading, mutate: mutateRun } = useRun(taskId, task?.currentRunId);
+  const { run, mutate: mutateRun } = useRun(taskId, task?.currentRunId);
   const { lastMessage } = useWS();
   const [activeTab, setActiveTab] = useState('plan');
 
@@ -35,7 +35,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
           await triggerRun(taskId);
           toast.success('Run triggered');
           mutateTask();
-      } catch (e) {
+      } catch {
           toast.error('Failed to trigger run');
       }
   };
@@ -49,7 +49,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
           toast.success('Plan approved');
           mutateTask();
           mutateRun();
-      } catch (e) {
+      } catch {
           toast.error('Failed to approve plan');
       }
   };

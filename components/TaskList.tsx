@@ -26,7 +26,7 @@ export function TaskList() {
             await triggerRun(taskId);
             toast.success('Run triggered successfully');
             mutate();
-        } catch (error) {
+        } catch {
             toast.error('Failed to trigger run');
         }
     };

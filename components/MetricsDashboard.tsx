@@ -15,7 +15,6 @@ import {
 import { useMetrics } from '@/lib/hooks';
 import { useWebSocket } from './WebSocketProvider';
 import { Metrics } from '@/lib/types';
-import { Card } from '@/components/ui/Card'; // I need to create a Card component
 
 // Helper for Card
 const MetricCard = ({ title, value, unit }: { title: string, value: string | number, unit?: string }) => (
@@ -34,18 +33,20 @@ export function MetricsDashboard() {
   const [metricsData, setMetricsData] = useState<Metrics[]>([]);
   const [timeRange, setTimeRange] = useState('1h');
 
-  // Load initial data
-  useEffect(() => {
-    if (initialMetrics) {
-      setMetricsData(initialMetrics);
-    }
+  // Initialize metrics data with initial metrics
+  const initialData = useMemo(() => {
+    return initialMetrics || [];
   }, [initialMetrics]);
+
+  useEffect(() => {
+    setMetricsData(initialData);
+  }, [initialData]);
 
   // Handle WS updates
   useEffect(() => {
     if (lastMessage && lastMessage.type === 'metrics_update') {
       const newMetric = lastMessage.payload as Metrics;
-      setMetricsData(prev => {
+      setMetricsData((prev: Metrics[]) => {
           const newData = [...prev, newMetric];
           // Keep only last N points to avoid memory issues if running long
           if (newData.length > 100) return newData.slice(newData.length - 100);
