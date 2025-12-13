@@ -75,7 +75,9 @@ export type WebSocketMessageType =
   | "run_update"
   | "alert"
   | "agent_message"
-  | "agent_action";
+  | "agent_action"
+  | "git_metadata_updated"
+  | "git_event";
 
 export interface WebSocketMessage {
   type: WebSocketMessageType;
@@ -100,3 +102,35 @@ export interface TaskRun {
   messages: AgentMessage[];
   status: TaskStatus;
 }
+
+export type RepositoryStatus = "connected" | "disconnected" | "syncing" | "error";
+
+export interface Repository {
+  id: string;
+  projectId: string;
+  name: string;
+  url: string;
+  branch: string;
+  status: RepositoryStatus;
+  lastSyncTime?: string;
+  lastSyncStatus?: "success" | "failed";
+  error?: string;
+}
+
+export interface GitMetadata {
+  branch?: string;
+  commitSha?: string;
+  commitMessage?: string;
+  authorName?: string;
+  authorEmail?: string;
+  prUrl?: string;
+  prNumber?: number;
+  lastSyncTime?: string;
+}
+
+export type GitEvent = {
+  type: "repo_connected" | "repo_disconnected" | "repo_synced" | "git_metadata_updated";
+  projectId: string;
+  repositoryId?: string;
+  data?: Record<string, unknown>;
+};

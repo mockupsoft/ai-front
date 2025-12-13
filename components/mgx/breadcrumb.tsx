@@ -2,38 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Fragment } from "react";
+import { Fragment, useContext } from "react";
 
 import { ChevronRight } from "lucide-react";
 
 import { navigationConfig } from "@/app/mgx/config/navigation";
-import { useWorkspace } from "@/lib/mgx/workspace/workspace-context";
+import { WorkspaceContext } from "@/lib/mgx/workspace/workspace-context";
 import { cn } from "@/lib/utils";
 
 export function MgxBreadcrumb({ className }: { className?: string }) {
   const pathname = usePathname();
   
-  // Safely get workspace context, handle SSR case
-  let currentWorkspace = null;
-  let currentProject = null;
-  let isLoadingWorkspaces = false;
-  let isLoadingProjects = false;
-  
-  try {
-    const { 
-      currentWorkspace: workspace, 
-      currentProject: project, 
-      isLoadingWorkspaces: loadingWS, 
-      isLoadingProjects: loadingProjects 
-    } = useWorkspace();
-    currentWorkspace = workspace;
-    currentProject = project;
-    isLoadingWorkspaces = loadingWS;
-    isLoadingProjects = loadingProjects;
-  } catch (error) {
-    // Context not available (SSR or outside provider)
-    console.debug("Workspace context not available in breadcrumb");
-  }
+  // Get workspace context safely - it may not be available during SSR/build
+  const context = useContext(WorkspaceContext);
+  const { 
+    currentWorkspace, 
+    currentProject, 
+    isLoadingWorkspaces, 
+    isLoadingProjects 
+  } = context ?? {
+    currentWorkspace: null,
+    currentProject: null,
+    isLoadingWorkspaces: false,
+    isLoadingProjects: false,
+  };
 
   const allItems = navigationConfig.flatMap((group) => group.items);
 

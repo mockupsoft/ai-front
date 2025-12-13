@@ -174,10 +174,103 @@ cp .env.local.example .env.local
 7. **Dark mode**: Automatic system preference detection
 8. **Environment awareness**: Clear visual indicators of environment
 
+## GitHub Repository Connection (Phase 5)
+
+### New Feature Overview
+Integrated GitHub repository connection UI for automated branch tracking and metadata sync:
+
+### Components Added
+- **`components/mgx/repository-connect-form.tsx`**: Form for connecting GitHub repos with validation
+- **`components/mgx/repositories-list.tsx`**: Table displaying connected repositories with actions
+- **`components/mgx/git-metadata-badge.tsx`**: Badges displaying branch, commit, and PR information
+- **`app/mgx/settings/git/page.tsx`**: Settings page for managing repository connections
+
+### Hooks Added
+- **`hooks/useRepositories.ts`**: SWR-based hook for fetching and caching repositories per project
+
+### API Functions Added
+- **`connectRepository()`**: POST endpoint to connect a new repository
+- **`disconnectRepository()`**: DELETE endpoint to disconnect a repository
+- **`refreshRepositoryMetadata()`**: POST endpoint to sync latest repository metadata
+
+### TypeScript Types Added
+- **`Repository`**: Repository connection with status and metadata
+- **`GitMetadata`**: Branch, commit, PR information for tasks
+- **`RepositoryStatus`**: Connection states (connected, syncing, error, disconnected)
+- **`GitEvent`**: WebSocket event types for git updates
+
+### Features
+1. **Repository Management** (`/mgx/settings/git`)
+   - Connect GitHub repositories with OAuth token support
+   - Disconnect repositories with confirmation
+   - Refresh metadata manually
+   - View connection status and last sync time
+
+2. **Task Integration**
+   - Display git metadata (branch, commit SHA, PR link) in task monitoring view
+   - Handle WebSocket git events (`git_metadata_updated`, `git_event`)
+   - Show toast notifications on metadata updates
+
+3. **Error Handling**
+   - Validation errors in form submission
+   - User-friendly error messages
+   - Graceful degradation on API failures
+
+4. **Performance Optimizations**
+   - SWR caching per project with smart invalidation
+   - Optimistic UI updates
+   - Debounced metadata refresh
+
+### Testing
+- **`__tests__/mgx/repository-connect-form.test.tsx`**: Form submission, error handling, optional fields
+- **`__tests__/mgx/git-metadata-badge.test.tsx`**: Badge rendering for branch, commit, PR
+- Updated **`__tests__/mgx/task-monitoring-view.test.tsx`**: Git metadata display and WebSocket events
+
+### Environment Configuration
+```env
+# Optional GitHub OAuth
+NEXT_PUBLIC_GITHUB_CLIENT_ID=your_client_id
+
+# API endpoints (already required)
+NEXT_PUBLIC_MGX_API_BASE_URL=/api/mgx
+NEXT_PUBLIC_MGX_WS_URL=ws://localhost:4000/ws
+```
+
+### Backend API Contract
+```
+GET /api/projects/{projectId}/repositories
+  - Returns: Repository[]
+
+POST /api/projects/{projectId}/repositories/connect
+  - Body: { url: string, branch: string, oauthToken?: string, appInstallId?: string }
+  - Returns: Repository
+
+DELETE /api/projects/{projectId}/repositories/{repoId}
+  - Returns: success response
+
+POST /api/projects/{projectId}/repositories/{repoId}/refresh
+  - Returns: Repository with updated metadata
+```
+
+### WebSocket Event Handling
+```typescript
+// Git metadata update event
+{
+  type: "git_metadata_updated" | "git_event",
+  payload: {
+    branch?: string,
+    commitSha?: string,
+    prNumber?: number,
+    prUrl?: string,
+    ...
+  }
+}
+```
+
 ## Next Steps
 
 1. **Authentication**: Add real authentication and user management
-2. **Real-time updates**: Implement WebSocket connections for live data
+2. **Advanced Git Features**: PR status checks, commit history view
 3. **Advanced features**: Add filtering, sorting, and search functionality
 4. **Accessibility**: Enhance keyboard navigation and screen reader support
 5. **Performance**: Add data caching and optimization
