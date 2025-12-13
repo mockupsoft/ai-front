@@ -1,4 +1,11 @@
-export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'waiting_approval';
+export type TaskStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "waiting_approval";
+
+export type TaskPhase = "analyze" | "plan" | "execute" | "review";
 
 export interface Task {
   id: string;
@@ -14,7 +21,7 @@ export interface Run {
   id: string;
   taskId: string;
   status: TaskStatus;
-  plan?: string; // Markdown or JSON representation of the plan
+  plan?: string;
   logs: string[];
   artifacts: Artifact[];
   createdAt: string;
@@ -24,8 +31,8 @@ export interface Run {
 export interface Artifact {
   id: string;
   name: string;
-  type: 'code' | 'test' | 'review';
-  content: string; // Could be a URL in real app, but content for now
+  type: "code" | "test" | "review";
+  content: string;
   language?: string;
 }
 
@@ -34,11 +41,41 @@ export interface Metrics {
   cacheHits: number;
   throughput: number;
   timestamp: number;
+  memoryUsageMB?: number;
+  phaseDurationsMs?: Partial<Record<TaskPhase, number>>;
 }
 
-export type WebSocketMessagePayload = Task | Run | Metrics | { [key: string]: unknown };
+export type RunProgressPayload = {
+  taskId?: string;
+  runId?: string;
+  phase?: TaskPhase;
+  progress?: number;
+  currentAction?: string;
+  etaSeconds?: number;
+  elapsedSeconds?: number;
+  status?: TaskStatus;
+  log?: string;
+  timestamp?: number;
+};
+
+export type WebSocketMessagePayload =
+  | Task
+  | Run
+  | Metrics
+  | RunProgressPayload
+  | { [key: string]: unknown };
+
+export type WebSocketMessageType =
+  | "plan_ready"
+  | "run_progress"
+  | "run_completed"
+  | "run_failed"
+  | "metrics_update"
+  | "task_update"
+  | "run_update"
+  | "alert";
 
 export interface WebSocketMessage {
-  type: 'plan_ready' | 'run_progress' | 'run_completed' | 'run_failed' | 'metrics_update';
+  type: WebSocketMessageType;
   payload: WebSocketMessagePayload;
 }
