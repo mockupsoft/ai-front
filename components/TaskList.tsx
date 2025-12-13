@@ -6,12 +6,16 @@ import { useTasks } from '@/lib/hooks';
 import { useWebSocket as useWS } from '@/components/WebSocketProvider';
 import { triggerRun } from '@/lib/api';
 import { StatusBadge } from './StatusBadge';
+import { CreateTaskModal } from './CreateTaskModal';
+import { TaskExecutionMonitor } from './TaskExecutionMonitor';
 import { toast } from 'sonner';
-import { Play } from 'lucide-react';
+import { Play, Plus } from 'lucide-react';
 
 export function TaskList() {
     const { tasks, isLoading, mutate } = useTasks();
     const { lastMessage } = useWS();
+    const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const [activeRun, setActiveRun] = React.useState<{ taskId: string; runId: string } | null>(null);
 
     React.useEffect(() => {
         if (lastMessage && ['run_progress', 'run_completed', 'run_failed', 'plan_ready'].includes(lastMessage.type)) {
@@ -23,19 +27,47 @@ export function TaskList() {
     const handleTrigger = async (e: React.MouseEvent, taskId: string) => {
         e.preventDefault();
         try {
-            await triggerRun(taskId);
+            const result = await triggerRun(taskId);
             toast.success('Run triggered successfully');
+            if (result.runId) {
+                setActiveRun({ taskId, runId: result.runId });
+            }
             mutate();
         } catch {
             toast.error('Failed to trigger run');
         }
     };
 
+    const handleTaskCreated = () => {
+        mutate();
+    };
+
     if (isLoading) return <div>Loading tasks...</div>;
 
     return (
         <div className="space-y-4">
-            <h1 className="text-2xl font-bold">Tasks</h1>
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold">Tasks</h1>
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                    <Plus className="w-5 h-5" />
+                    New Task
+                </button>
+            </div>
+
+            {activeRun && (
+                <div className="mb-6">
+                    <TaskExecutionMonitor
+                        taskId={activeRun.taskId}
+                        runId={activeRun.runId}
+                        onClose={() => setActiveRun(null)}
+                        onStatusChange={() => mutate()}
+                    />
+                </div>
+            )}
+
             <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-50 dark:bg-gray-900">
@@ -74,6 +106,12 @@ export function TaskList() {
                     </tbody>
                 </table>
             </div>
+
+            <CreateTaskModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onTaskCreated={handleTaskCreated}
+            />
         </div>
     );
 }
