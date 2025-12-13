@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { MgxBreadcrumb } from "@/components/mgx/breadcrumb";
 import { MgxHeader } from "@/components/mgx/header";
 import { MgxSidebar } from "@/components/mgx/sidebar";
 import { MgxSidebarNav } from "@/components/mgx/sidebar-nav";
@@ -22,6 +23,10 @@ export default function MgxLayout({
 
           <div className="border-b border-zinc-200 bg-white px-6 py-3 dark:border-zinc-800 dark:bg-zinc-950 lg:hidden">
             <MgxSidebarNav variant="horizontal" />
+          </div>
+
+          <div className="border-b border-zinc-200 bg-white px-6 py-3 dark:border-zinc-800 dark:bg-zinc-950">
+            <MgxBreadcrumb />
           </div>
 
           <main className="flex-1 px-6 py-6">{children}</main>
