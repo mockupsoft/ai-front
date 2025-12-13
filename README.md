@@ -497,6 +497,65 @@ NEXT_PUBLIC_MGX_WS_URL=wss://api.yourdomain.com/ws
 NEXT_PUBLIC_ENV=production
 ```
 
+### 🏢 Workspace Selection & Management
+
+The MGX Dashboard now includes comprehensive workspace and project management functionality:
+
+#### Features
+- **Multi-tenant Architecture**: Users can switch between different workspaces and projects
+- **Context-Aware Data**: All API requests automatically include workspace/project scoping
+- **Persistent Selection**: Workspace and project selections persist across sessions via URL params and localStorage
+- **Real-time Context**: Breadcrumbs and navigation show current workspace/project context
+- **WebSocket Integration**: Live data streams are automatically filtered by workspace/project context
+
+#### Backend Endpoints
+The workspace system integrates with the following backend endpoints:
+- `GET /api/workspaces` - Fetch available workspaces
+- `GET /api/projects?workspace_id=...` - Fetch projects within a workspace
+
+#### Implementation Components
+- **WorkspaceProvider** (`lib/mgx/workspace/workspace-context.tsx`): React context managing workspace state
+- **WorkspaceSelector** (`lib/mgx/workspace/workspace-selector.tsx`): UI component for workspace/project selection
+- **Updated API Layer** (`lib/api.ts`): Enhanced with workspace/project scoping
+- **Updated Hooks**: `useTasks`, `useMetrics`, `useWebSocket` now automatically include workspace context
+
+#### Usage
+```tsx
+import { useWorkspace } from "@/lib/mgx/workspace/workspace-context";
+
+function MyComponent() {
+  const {
+    currentWorkspace,
+    currentProject,
+    selectWorkspace,
+    selectProject,
+    workspaces,
+    projects,
+  } = useWorkspace();
+
+  // Access current selections and trigger changes
+  return (
+    <div>
+      <h3>Current Context:</h3>
+      <p>Workspace: {currentWorkspace?.name}</p>
+      <p>Project: {currentProject?.name}</p>
+    </div>
+  );
+}
+```
+
+#### UI Integration
+- **Header Integration**: Workspace/project selectors appear in the main dashboard header
+- **Breadcrumb Enhancement**: Shows current workspace/project context with icons
+- **Context Switching**: Dropdown selectors for both workspace and project levels
+- **Loading States**: Visual feedback during workspace/project data fetching
+- **Error Handling**: Graceful degradation when API calls fail
+- **Empty States**: Clear messaging when no workspaces or projects are available
+
+#### Environment Variables
+- `NEXT_PUBLIC_MGX_API_BASE_URL`: Backend API base URL for workspace endpoints
+- `NEXT_PUBLIC_MGX_WS_URL`: WebSocket URL for real-time workspace-scoped updates
+
 ---
 
 ## 📚 Documentation
@@ -537,18 +596,34 @@ Additional documentation available:
 - Role-based access control
 - Permission management
 - Session handling
+- Workspace-level permissions
+- Project access controls
 
 ### Phase 6: Advanced Analytics 📊
 - Custom dashboard builder
 - Data export (CSV, PDF)
 - Advanced filtering
 - Custom reports
+- Cross-workspace analytics
+- Workspace performance comparison
 
 ### Phase 7: Team Collaboration 👥
 - Multi-user support
 - Activity logging
 - Team management
 - Notifications & alerts
+- Workspace sharing & collaboration
+- Cross-project task management
+
+### ✅ Phase 4.5: Workspace Management (COMPLETED)
+- ✅ Workspace selection UI with dropdowns
+- ✅ Project management within workspaces
+- ✅ Context-aware API integration
+- ✅ Persistent workspace/project selection
+- ✅ Breadcrumb navigation enhancement
+- ✅ WebSocket filtering by workspace/project
+- ✅ Comprehensive component tests
+- ✅ Updated documentation
 
 ---
 

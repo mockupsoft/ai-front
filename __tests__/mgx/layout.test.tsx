@@ -2,9 +2,23 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 
 import MgxLayout from "@/app/mgx/layout";
+import { fetcher } from "@/lib/api";
 
 jest.mock("next/navigation", () => ({
   usePathname: jest.fn(() => "/mgx"),
+  useRouter: jest.fn(() => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    refresh: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    prefetch: jest.fn(),
+  })),
+  useSearchParams: jest.fn(() => new URLSearchParams()),
+}));
+
+jest.mock("@/lib/api", () => ({
+  fetcher: jest.fn(),
 }));
 
 jest.mock("next/link", () => {
@@ -16,6 +30,13 @@ jest.mock("next/link", () => {
 });
 
 describe("MgxLayout", () => {
+  beforeEach(() => {
+    (fetcher as jest.Mock).mockImplementation((path: string) => {
+      if (path === "/workspaces") return Promise.resolve([]);
+      return Promise.reject(new Error("Unknown path"));
+    });
+  });
+
   it("renders children", () => {
     render(
       <MgxLayout>

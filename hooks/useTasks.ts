@@ -4,9 +4,21 @@ import useSWR from "swr";
 
 import { fetcher } from "@/lib/api";
 import type { Run, Task } from "@/lib/types";
+import { useWorkspace } from "@/lib/mgx/workspace/workspace-context";
 
 export function useTasks() {
-  const { data, error, isLoading, mutate } = useSWR<Task[]>("/tasks", fetcher);
+  const { currentWorkspace, currentProject } = useWorkspace();
+  
+  const apiOptions = {
+    workspaceId: currentWorkspace?.id,
+    projectId: currentProject?.id,
+  };
+
+  const { data, error, isLoading, mutate } = useSWR<Task[]>(
+    currentWorkspace ? ["/tasks", apiOptions] : null,
+    ([path, options]) => fetcher<Task[]>(path, options as { workspaceId?: string; projectId?: string }),
+  );
+  
   return {
     tasks: data,
     isLoading,
@@ -16,10 +28,18 @@ export function useTasks() {
 }
 
 export function useTask(id: string) {
+  const { currentWorkspace, currentProject } = useWorkspace();
+  
+  const apiOptions = {
+    workspaceId: currentWorkspace?.id,
+    projectId: currentProject?.id,
+  };
+
   const { data, error, isLoading, mutate } = useSWR<Task>(
-    id ? `/tasks/${id}` : null,
-    fetcher,
+    id && currentWorkspace ? [`/tasks/${id}`, apiOptions] : null,
+    ([path, options]) => fetcher<Task>(path, options as { workspaceId?: string; projectId?: string }),
   );
+  
   return {
     task: data,
     isLoading,
@@ -29,9 +49,16 @@ export function useTask(id: string) {
 }
 
 export function useRun(taskId: string, runId?: string) {
+  const { currentWorkspace, currentProject } = useWorkspace();
+  
+  const apiOptions = {
+    workspaceId: currentWorkspace?.id,
+    projectId: currentProject?.id,
+  };
+
   const { data, error, isLoading, mutate } = useSWR<Run>(
-    taskId && runId ? `/tasks/${taskId}/runs/${runId}` : null,
-    fetcher,
+    taskId && runId && currentWorkspace ? [`/tasks/${taskId}/runs/${runId}`, apiOptions] : null,
+    ([path, options]) => fetcher<Run>(path, options as { workspaceId?: string; projectId?: string }),
   );
 
   return {
