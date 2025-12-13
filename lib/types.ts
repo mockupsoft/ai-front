@@ -73,9 +73,30 @@ export type WebSocketMessageType =
   | "metrics_update"
   | "task_update"
   | "run_update"
-  | "alert";
+  | "alert"
+  | "agent_message"
+  | "agent_action";
 
 export interface WebSocketMessage {
   type: WebSocketMessageType;
   payload: WebSocketMessagePayload;
+}
+
+export interface AgentMessage {
+  id: string;
+  taskId: string;
+  runId?: string;
+  agentName: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  timestamp: number;
+  actionType?: "thinking" | "executing" | "completed" | "error";
+}
+
+export interface TaskRun {
+  taskId: string;
+  runId: string;
+  startedAt: number;
+  messages: AgentMessage[];
+  status: TaskStatus;
 }

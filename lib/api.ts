@@ -65,3 +65,15 @@ export async function downloadArtifact(taskId: string, runId: string, artifactId
     "_blank",
   );
 }
+
+export async function createTask(name: string, description?: string) {
+  const res = await fetch(resolveUrl("/tasks"), {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ name, description }),
+  });
+  if (!res.ok) throw new Error("Failed to create task");
+  return res.json();
+}

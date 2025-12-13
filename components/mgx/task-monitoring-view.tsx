@@ -18,6 +18,7 @@ import { useWebSocket } from "@/components/WebSocketProvider";
 import { PlanApprovalModal } from "@/components/mgx/plan-approval-modal";
 import { ResultsViewer } from "@/components/mgx/results-viewer";
 import { TaskMonitor } from "@/components/mgx/task-monitor";
+import { AgentChat } from "@/components/AgentChat";
 import { triggerRun } from "@/lib/api";
 import type { RunProgressPayload, TaskPhase, TaskStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -193,6 +194,28 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
         startedAt={run?.createdAt}
         etaSeconds={liveEtaSeconds}
       />
+
+      {task.currentRunId && (
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle>Agent Communication</CardTitle>
+              <CardDescription>
+                Real-time agent activity and communication during task execution.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-96">
+              <AgentChat
+                taskId={taskId}
+                runId={task.currentRunId}
+                isRunning={task.status === "running"}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
