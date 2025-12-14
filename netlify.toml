@@ -1,0 +1,35 @@
+[build]
+  # Base directory: Netlify dashboard'da "frontend" olarak ayarlanmalı
+  # (Bu dosya frontend klasöründe olduğu için Netlify otomatik algılar)
+  command = "npm install && npm run build"
+  # Next.js plugin publish directory'yi otomatik belirler
+  publish = ".next"
+
+[build.environment]
+  # Node.js versiyonu
+  NODE_VERSION = "18"
+
+# Next.js 16 için Netlify plugin
+# Bu plugin App Router, API routes ve routing'i otomatik handle eder
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache ayarları
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/_next/image"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

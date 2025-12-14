@@ -234,6 +234,17 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 export function useWorkspace(): WorkspaceContextType {
   const context = useContext(WorkspaceContext);
   if (context === undefined) {
+    // During static generation, return default state instead of throwing
+    // This allows components to render safely during build time
+    if (typeof window === 'undefined') {
+      return {
+        ...defaultState,
+        selectWorkspace: async () => {},
+        selectProject: async () => {},
+        refreshWorkspaces: async () => {},
+        refreshProjects: async () => {},
+      };
+    }
     throw new Error("useWorkspace must be used within a WorkspaceProvider");
   }
   return context;

@@ -1333,6 +1333,82 @@ NEXT_PUBLIC_MGX_WS_URL=wss://api.yourdomain.com/ws
 NEXT_PUBLIC_ENV=production
 ```
 
+### 🚀 Netlify Deployment
+
+Bu proje Netlify'a deploy edilmek için hazırlanmıştır. `netlify.toml` dosyası proje root'unda bulunmaktadır.
+
+#### Önkoşullar
+- Netlify hesabı ([app.netlify.com](https://app.netlify.com))
+- GitHub repository'ye push yetkisi
+- Backend API URL'i (production ortamı için)
+
+#### Deployment Adımları
+
+**1. Netlify Dashboard'da Site Oluşturma**
+1. [Netlify Dashboard](https://app.netlify.com)'a giriş yapın
+2. "Add new site" > "Import an existing project" seçin
+3. GitHub'ı bağlayın (ilk kez ise yetkilendirme gerekir)
+4. Repository'yi seçin (`ai-team` veya frontend repository'niz)
+5. Branch: `main` (veya `master`)
+
+**2. Build Ayarları**
+Netlify otomatik olarak `netlify.toml` dosyasını algılar, ancak manuel kontrol için:
+- **Base directory**: `frontend` (proje root'unda değilse)
+- **Build command**: `npm install && npm run build` (netlify.toml'da tanımlı)
+- **Publish directory**: `.next` (netlify.toml'da tanımlı)
+- **Node version**: 18.x (netlify.toml'da tanımlı)
+
+**3. Environment Variables Ayarlama**
+Site settings > Environment variables bölümüne gidin ve şu değişkenleri ekleyin:
+
+```bash
+# Zorunlu
+NEXT_PUBLIC_MGX_API_BASE_URL=https://api.yourdomain.com
+NEXT_PUBLIC_MGX_WS_URL=wss://api.yourdomain.com/ws
+
+# Opsiyonel
+NEXT_PUBLIC_ENV=production
+NEXT_PUBLIC_GITHUB_CLIENT_ID=your_github_client_id
+```
+
+**4. İlk Deploy**
+- "Deploy site" butonuna tıklayın
+- Build işlemi başlayacak (yaklaşık 2-5 dakika)
+- Deploy tamamlandığında site URL'i gösterilecek
+
+**5. Otomatik Deploy**
+- Her `main` branch'e push işlemi otomatik deploy tetikler
+- Pull request'ler için preview deploy'lar oluşturulur
+- Deploy durumunu Netlify dashboard'dan takip edebilirsiniz
+
+#### Netlify Yapılandırması
+
+`netlify.toml` dosyası şunları içerir:
+- **Build settings**: Node.js versiyonu, build komutu
+- **Next.js plugin**: `@netlify/plugin-nextjs` otomatik yüklenir
+- **Redirects**: API routes için gerekli yönlendirmeler
+- **Headers**: Güvenlik ve cache ayarları
+
+#### Troubleshooting
+
+**Build hatası alıyorsanız:**
+- Node.js versiyonunu kontrol edin (18.x gerekli)
+- Environment variables'ların doğru ayarlandığından emin olun
+- Build loglarını Netlify dashboard'dan inceleyin
+
+**API bağlantı sorunları:**
+- Backend CORS ayarlarını kontrol edin (Netlify domain'i için)
+- `NEXT_PUBLIC_MGX_API_BASE_URL` değerinin doğru olduğundan emin olun
+- WebSocket URL'inin `wss://` (secure) protokolü kullandığından emin olun
+
+**Custom domain kullanımı:**
+- Site settings > Domain management
+- Custom domain ekleyin ve DNS ayarlarını yapın
+
+#### Daha Fazla Bilgi
+- [Netlify Next.js Dokümantasyonu](https://docs.netlify.com/integrations/frameworks/nextjs/)
+- [Netlify Environment Variables](https://docs.netlify.com/environment-variables/overview/)
+
 ### 🏢 Workspace Selection & Management
 
 The MGX Dashboard now includes comprehensive workspace and project management functionality:
