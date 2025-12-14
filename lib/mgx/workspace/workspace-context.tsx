@@ -34,20 +34,34 @@ interface WorkspaceProviderProps {
 
 export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const [state, setState] = useState<WorkspaceContextState>(defaultState);
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  // Use hooks safely - they may not be available during SSR/build
+  let router: ReturnType<typeof useRouter> | null = null;
+  let pathname: string = '/';
+  let searchParams: URLSearchParams | null = null;
+  
+  try {
+    router = useRouter();
+    pathname = usePathname();
+    searchParams = useSearchParams();
+  } catch (error) {
+    // During SSR/build, these hooks may not be available
+    // Use defaults that won't cause errors
+    console.warn('WorkspaceProvider: Navigation hooks not available during build');
+  }
 
   // Get initial selection from URL params or localStorage
   const getInitialSelection = useCallback(() => {
-    // Try URL params first
-    const urlWorkspaceId = searchParams.get(WORKSPACE_PARAM);
+    // Try URL params first (only if searchParams is available)
+    const urlWorkspaceId = searchParams?.get(WORKSPACE_PARAM) || null;
 
-    // Fallback to localStorage
-    const storedWorkspaceId = urlWorkspaceId || localStorage.getItem(WORKSPACE_STORAGE_KEY);
+    // Fallback to localStorage (only in browser)
+    let storedWorkspaceId = null;
+    if (typeof window !== 'undefined') {
+      storedWorkspaceId = localStorage.getItem(WORKSPACE_STORAGE_KEY);
+    }
 
     return {
-      workspaceId: storedWorkspaceId,
+      workspaceId: urlWorkspaceId || storedWorkspaceId,
     };
   }, [searchParams]);
 
@@ -108,16 +122,20 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
 
   // Select workspace
   const selectWorkspace = useCallback(async (workspace: Workspace) => {
-    // Update URL params
-    const newSearchParams = new URLSearchParams(searchParams.toString());
+    // Update URL params (only if searchParams is available)
+    const newSearchParams = searchParams 
+      ? new URLSearchParams(searchParams.toString())
+      : new URLSearchParams();
     newSearchParams.set(WORKSPACE_PARAM, workspace.id);
     
     // Clear project when workspace changes
     newSearchParams.delete(PROJECT_PARAM);
 
-    // Update localStorage
-    localStorage.setItem(WORKSPACE_STORAGE_KEY, workspace.id);
-    localStorage.removeItem(PROJECT_STORAGE_KEY);
+    // Update localStorage (only in browser)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(WORKSPACE_STORAGE_KEY, workspace.id);
+      localStorage.removeItem(PROJECT_STORAGE_KEY);
+    }
 
     // Update state
     setState((prev) => ({
@@ -130,18 +148,24 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     // Fetch projects for new workspace
     await fetchProjects(workspace.id);
 
-    // Update URL
-    router.push(`${pathname}?${newSearchParams.toString()}`, { scroll: false });
+    // Update URL (only if router is available)
+    if (router) {
+      router.push(`${pathname}?${newSearchParams.toString()}`, { scroll: false });
+    }
   }, [router, pathname, searchParams, fetchProjects]);
 
   // Select project
   const selectProject = useCallback(async (project: Project) => {
-    // Update URL params
-    const newSearchParams = new URLSearchParams(searchParams.toString());
+    // Update URL params (only if searchParams is available)
+    const newSearchParams = searchParams
+      ? new URLSearchParams(searchParams.toString())
+      : new URLSearchParams();
     newSearchParams.set(PROJECT_PARAM, project.id);
 
-    // Update localStorage
-    localStorage.setItem(PROJECT_STORAGE_KEY, project.id);
+    // Update localStorage (only in browser)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(PROJECT_STORAGE_KEY, project.id);
+    }
 
     // Update state
     setState((prev) => ({
@@ -149,8 +173,10 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       currentProject: project,
     }));
 
-    // Update URL
-    router.push(`${pathname}?${newSearchParams.toString()}`, { scroll: false });
+    // Update URL (only if router is available)
+    if (router) {
+      router.push(`${pathname}?${newSearchParams.toString()}`, { scroll: false });
+    }
   }, [router, pathname, searchParams]);
 
   // Refresh workspaces
@@ -160,8 +186,10 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     // If current workspace is no longer available, clear it
     const { workspaceId } = getInitialSelection();
     if (workspaceId && !state.workspaces.find(w => w.id === workspaceId)) {
-      localStorage.removeItem(WORKSPACE_STORAGE_KEY);
-      localStorage.removeItem(PROJECT_STORAGE_KEY);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(WORKSPACE_STORAGE_KEY);
+        localStorage.removeItem(PROJECT_STORAGE_KEY);
+      }
       setState((prev) => ({
         ...prev,
         currentWorkspace: null,
