@@ -6,8 +6,8 @@
   publish = ".next"
 
 [build.environment]
-  # Node.js versiyonu
-  NODE_VERSION = "18"
+  # Node.js versiyonu (Next.js 16 için >=20.9.0 gerekli)
+  NODE_VERSION = "20"
 
 # Next.js 16 için Netlify plugin
 # Bu plugin App Router, API routes ve routing'i otomatik handle eder
