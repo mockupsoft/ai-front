@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 
 import {
+  Bot,
   Gauge,
   LayoutDashboard,
   ListChecks,
@@ -42,6 +43,11 @@ export const navigationConfig: NavGroup[] = [
         href: "/mgx/results",
         label: "Results",
         icon: Trophy,
+      },
+      {
+        href: "/mgx/agents",
+        label: "Agents",
+        icon: Bot,
       },
     ],
   },

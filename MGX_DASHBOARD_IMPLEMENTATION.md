@@ -277,12 +277,20 @@ POST /api/projects/{projectId}/repositories/{repoId}/refresh
 - `AgentInstance`: Current agent with status, metrics, and context
 - `AgentActivityEvent`: Single agent event (status change, action, error, message)
 - `AgentContextSnapshot`: Agent execution context at a point in time
+- `AgentContextVersion`: Historical context snapshot with version and rollback capability
+- `AgentConfiguration`: Agent settings and configuration object
 
 ### New API Endpoints (lib/api.ts)
 - `fetchAgentInstances()`: List agents with current status and metrics
 - `fetchAgentDefinitions()`: Get available agent definitions
 - `fetchAgentContext(agentId)`: Fetch agent's execution context
 - `fetchAgentMessages(agentId, limit, offset)`: Get agent message history
+- `fetchAgentContextHistory(agentId)`: Get historical context versions
+- `updateAgentConfig(agentId, config)`: Update agent configuration (PATCH)
+- `activateAgent(agentId)`: Activate an idle agent (POST)
+- `deactivateAgent(agentId)`: Deactivate an active agent (POST)
+- `shutdownAgent(agentId)`: Shutdown an agent instance (POST)
+- `rollbackAgentContext(agentId, version)`: Rollback context to previous version (POST)
 
 ### New Hook (hooks/useAgents.ts)
 - `useAgents(options?)`: SWR hook for agent list with filtering and derived counts
@@ -294,16 +302,41 @@ POST /api/projects/{projectId}/repositories/{repoId}/refresh
 - **agent-status-list.tsx**: List of agents with name, status, and metrics
 - **agent-activity-timeline.tsx**: Real-time activity feed with event types and timestamps
 - **agent-metrics-summary.tsx**: KPI cards with active/idle/error/total counts (compact & full)
+- **agent-list.tsx**: Sortable table showing all agents with filtering
+- **agent-details-panel.tsx**: Agent details, configuration editor, context history with rollback
+- **agent-controls.tsx**: Lifecycle control buttons (activate, deactivate, shutdown)
+
+### Management Page Features
+- **Route**: `/mgx/agents` with page.tsx, loading.tsx, error.tsx
+- **Agent List Table**:
+  - Sortable columns (name, status, last heartbeat)
+  - Filterable by status (idle, active, executing, error, offline)
+  - Shows linked tasks and metrics
+  - Click to select agent for details view
+- **Agent Details Panel**:
+  - View full agent configuration
+  - Edit configuration via JSON editor (PATCH API)
+  - View current execution context
+  - Browse context history with version timestamps
+  - Rollback context to previous versions with confirmation
+- **Agent Controls**:
+  - Activate/deactivate buttons (state-aware, disabled when offline)
+  - Shutdown button with confirmation dialog
+  - Displays current status and ID
+- **Toast Notifications**: Success/error feedback for all mutations
+- **Responsive Layout**: 1/3 width agent list + 2/3 width details on desktop, stacked on mobile
 
 ### WebSocket Integration
 - New event types: `agent_status_changed`, `agent_activity`, `agent_message`, `agent_context_updated`
 - WebSocketProvider handles events silently, UI updates via SWR hooks
 - Fallback endpoint: `NEXT_PUBLIC_MGX_AGENT_WS_URL` (defaults to `/ws/agents/stream`)
+- Real-time status updates in agent list and details view
 
 ### Enhanced Components
 - **TaskMonitoringView**: Added "Assigned Agents" section with status list and activity timeline
 - **AgentChat**: Fetches message history from backend with IndexedDB fallback
 - **Overview Page**: Agent KPI cards with live counts and activity summary
+- **Navigation**: Added "Agents" menu item under Management section with Robot icon
 
 ### Environment Variables
 - `NEXT_PUBLIC_MGX_AGENT_WS_URL`: Optional agent WebSocket endpoint (fallback to main WS URL)
@@ -313,8 +346,41 @@ POST /api/projects/{projectId}/repositories/{repoId}/refresh
 - `__tests__/mgx/agent-status-list.test.tsx`
 - `__tests__/mgx/agent-activity-timeline.test.tsx`
 - `__tests__/mgx/agent-metrics-summary.test.tsx`
+- `__tests__/mgx/agent-list.test.tsx`: List rendering, sorting, filtering, row selection
+- `__tests__/mgx/agent-details-panel.test.tsx`: Configuration editing, context history, metrics display
+- `__tests__/mgx/agent-controls.test.tsx`: Lifecycle action buttons, confirmation dialogs
 - `__tests__/hooks/useAgents.test.ts`
 - Extended `task-monitoring-view.test.tsx` with agent event handling tests
+
+### Backend API Contract (New Endpoints)
+```
+GET /agents
+  Query Params: workspace_id?, project_id?
+  Returns: AgentInstance[]
+
+GET /agents/{agentId}/context
+  Returns: AgentContextSnapshot
+
+GET /agents/{agentId}/context/history
+  Returns: AgentContextVersion[]
+
+PATCH /agents/{agentId}
+  Body: { name?: string, settings?: Record<string, unknown> }
+  Returns: AgentInstance
+
+POST /agents/{agentId}/activate
+  Returns: AgentInstance
+
+POST /agents/{agentId}/deactivate
+  Returns: AgentInstance
+
+POST /agents/{agentId}/shutdown
+  Returns: { status: "shutdown" }
+
+POST /agents/{agentId}/context/rollback
+  Body: { version: number }
+  Returns: AgentContextSnapshot
+```
 
 ## Next Steps
 
