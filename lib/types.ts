@@ -80,7 +80,15 @@ export type WebSocketMessageType =
   | "agent_activity"
   | "agent_context_updated"
   | "git_metadata_updated"
-  | "git_event";
+  | "git_event"
+  | "workflow_execution_started"
+  | "workflow_step_started"
+  | "workflow_step_completed"
+  | "workflow_step_failed"
+  | "workflow_step_retrying"
+  | "workflow_execution_completed"
+  | "workflow_execution_failed"
+  | "workflow_log_entry";
 
 export interface WebSocketMessage {
   type: WebSocketMessageType;

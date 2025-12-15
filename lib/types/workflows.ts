@@ -91,3 +91,72 @@ export interface WorkflowUpsertRequest {
   description?: string;
   definition: WorkflowDefinition;
 }
+
+export type WorkflowExecutionStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type StepExecutionStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "skipped"
+  | "retrying";
+
+export interface StepExecution {
+  stepId: string;
+  stepName: string;
+  status: StepExecutionStatus;
+  startedAt?: number;
+  completedAt?: number;
+  durationMs?: number;
+  retryCount?: number;
+  error?: string;
+  agentId?: string;
+  outputs?: Record<string, unknown>;
+}
+
+export interface WorkflowExecution {
+  id: string;
+  workflowId: string;
+  status: WorkflowExecutionStatus;
+  startedAt: number;
+  completedAt?: number;
+  durationMs?: number;
+  steps: StepExecution[];
+  triggerredBy?: string;
+  variables?: Record<string, unknown>;
+  error?: string;
+}
+
+export interface ExecutionMetrics {
+  totalDuration: number;
+  successRate: number;
+  totalSteps: number;
+  completedSteps: number;
+  failedSteps: number;
+  retryCount: number;
+  agentUtilization: Record<string, number>;
+}
+
+export type WorkflowEventType =
+  | "workflow_execution_started"
+  | "workflow_step_started"
+  | "workflow_step_completed"
+  | "workflow_step_failed"
+  | "workflow_step_retrying"
+  | "workflow_execution_completed"
+  | "workflow_execution_failed"
+  | "workflow_log_entry";
+
+export interface WorkflowEvent {
+  type: WorkflowEventType;
+  executionId: string;
+  stepId?: string;
+  timestamp: number;
+  data?: Record<string, unknown>;
+}

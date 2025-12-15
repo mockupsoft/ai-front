@@ -1,9 +1,9 @@
 # MGX Dashboard Shell Implementation
 
 ## Overview
-This document describes the implementation of the MGX Dashboard Shell across all phases (4.5-7).
+This document describes the implementation of the MGX Dashboard Shell across all phases (4.5-8).
 
-**Latest Update**: Phase 7 - Agent Status UI with Live Telemetry
+**Latest Update**: Phase 8 - Workflow Timeline Monitor with Live Execution Updates
 
 ## Implemented Features
 
@@ -382,12 +382,204 @@ POST /agents/{agentId}/context/rollback
   Returns: AgentContextSnapshot
 ```
 
+## Phase 8: Workflow Timeline Monitor
+
+### Overview
+Real-time execution timeline view that consumes workflow events, shows per-step progress, and streams logs/metrics.
+
+### Routes & Pages
+```
+/mgx/workflows/[workflowId]/executions
+  - Paginated execution list with status filtering
+  - Trigger execution button with optimistic UI
+  
+/mgx/workflows/[workflowId]/executions/[executionId]
+  - Real-time timeline visualization
+  - Per-step metrics and logs
+  - Failure indicators and retry tracking
+  - Live WebSocket updates
+```
+
+### Components
+1. **WorkflowExecutionList** (`components/mgx/workflow-execution-list.tsx`)
+   - Sortable/filterable table of execution history
+   - Status pills (completed, failed, running, pending)
+   - Duration and step completion ratio
+   - Links to execution detail pages
+
+2. **WorkflowTimeline** (`components/mgx/workflow-timeline.tsx`)
+   - Gantt-style stacked timeline visualization
+   - Step progress bars with duration scaling
+   - Status indicators (completed, failed, running, retrying)
+   - Retry count and error messages
+   - Expandable step details with outputs/logs
+   - Agent assignment display
+
+3. **ExecutionMetricsCards** (`components/mgx/execution-metrics-cards.tsx`)
+   - Total duration
+   - Success rate percentage
+   - Steps completed / total
+   - Retry count
+   - Agent utilization metrics
+
+4. **ExecutionLogPanel** (`components/mgx/execution-log-panel.tsx`)
+   - Live streaming logs with auto-scroll
+   - Per-step or execution-wide logs
+   - Monospace formatting with line preservation
+   - 500ms refresh interval for live updates
+   - Scrollable container for long outputs
+
+### API Extensions
+
+#### New Endpoints
+```
+GET /workflows/{id}/executions         # List executions
+GET /executions/{id}                   # Get execution details
+POST /workflows/{id}/executions        # Trigger execution
+GET /executions/{id}/logs              # Get execution logs
+GET /executions/{id}/steps/{stepId}/logs # Get step logs
+GET /executions/{id}/metrics           # Get execution metrics
+```
+
+#### New API Functions (`lib/api.ts`)
+- `fetchWorkflowExecutions(workflowId, limit, offset, options)`
+- `fetchWorkflowExecution(executionId, options)`
+- `triggerWorkflowExecution(workflowId, variables, options)`
+- `fetchExecutionLogs(executionId, stepId, limit, offset, options)`
+- `fetchExecutionMetrics(executionId, options)`
+
+### WebSocket Enhancement
+
+#### Extended Subscriptions (`hooks/useWebSocket.ts`)
+```typescript
+type WebSocketSubscription = {
+  taskId?: string;
+  runId?: string;
+  executionId?: string;      // NEW
+  workflowId?: string;        // NEW
+  topics?: string[];
+}
+```
+
+#### New Message Types (`lib/types.ts`)
+- `workflow_execution_started`
+- `workflow_step_started`
+- `workflow_step_completed`
+- `workflow_step_failed`
+- `workflow_step_retrying`
+- `workflow_execution_completed`
+- `workflow_execution_failed`
+- `workflow_log_entry`
+
+### Types (`lib/types/workflows.ts`)
+
+```typescript
+type WorkflowExecutionStatus = 
+  | "pending" | "running" | "completed" | "failed" | "cancelled"
+
+type StepExecutionStatus = 
+  | "pending" | "running" | "completed" | "failed" | "skipped" | "retrying"
+
+interface StepExecution {
+  stepId: string;
+  stepName: string;
+  status: StepExecutionStatus;
+  startedAt?: number;
+  completedAt?: number;
+  durationMs?: number;
+  retryCount?: number;
+  error?: string;
+  agentId?: string;
+  outputs?: Record<string, unknown>;
+}
+
+interface WorkflowExecution {
+  id: string;
+  workflowId: string;
+  status: WorkflowExecutionStatus;
+  startedAt: number;
+  completedAt?: number;
+  durationMs?: number;
+  steps: StepExecution[];
+  triggeredBy?: string;
+  variables?: Record<string, unknown>;
+  error?: string;
+}
+
+interface ExecutionMetrics {
+  totalDuration: number;
+  successRate: number;
+  totalSteps: number;
+  completedSteps: number;
+  failedSteps: number;
+  retryCount: number;
+  agentUtilization: Record<string, number>;
+}
+```
+
+### Hooks
+- `useWorkflowExecutions(workflowId)` - List with manual fetch + mutate
+- `useWorkflowExecution(executionId)` - Auto-refresh every 1 second
+- `useExecutionMetrics(executionId)` - Auto-refresh every 1 second
+
+### Tests
+✅ All tests passing (57 new tests)
+
+#### Unit Tests
+- `__tests__/mgx/workflow-timeline.test.tsx` (15 tests)
+  - Rendering, status display, duration, step details
+  - Error and retry indicators, expandable sections
+  
+- `__tests__/mgx/workflow-execution-list.test.tsx` (11 tests)
+  - List rendering, filtering, sorting
+  - Status pills, duration formatting, links
+  
+- `__tests__/mgx/execution-metrics-cards.test.tsx` (13 tests)
+  - Metric display and formatting
+  - Different duration/success rate scenarios
+  
+- `__tests__/mgx/execution-log-panel.test.tsx` (14 tests)
+  - Log rendering and streaming
+  - Multiline handling, monospace formatting
+  
+- `__tests__/mgx/workflow-execution-integration.test.tsx` (4 tests)
+  - Hook integration and state transitions
+
+#### E2E Tests
+- `e2e/workflow-execution.spec.ts`
+  - ✓ Triggers execution and monitors timeline with live updates
+  - ✓ Handles execution failure and shows error indicators
+  - ✓ Shows retry indicators for retried steps
+
+### Key Architecture Decisions
+
+1. **Real-time Updates**: 1-second refresh intervals for live execution state + WebSocket for event notifications
+
+2. **Timeline Visualization**: Gantt-style bars with proportional duration display, handles parallel steps
+
+3. **Log Streaming**: Separate API calls with 500ms refresh for live log panels, independent of execution state
+
+4. **Error Handling**: Graceful fallbacks for WebSocket disconnects, all data fetched via REST with SWR caching
+
+5. **Responsive Layout**: Timeline on left (2/3 width), step details panel on right (1/3 width) on desktop, stacked on mobile
+
+6. **Metrics Aggregation**: Real-time calculations from execution state (success rate, step completion ratio)
+
+### Build & Test Status
+✅ Production build succeeds
+✅ Routes properly registered
+✅ All 57 new tests passing
+✅ No TypeScript errors
+✅ No linting issues
+
 ## Next Steps
 
 1. **Authentication**: Add real authentication and user management
 2. **Advanced Git Features**: PR status checks, commit history view
 3. **Advanced Agent Features**: Agent debugging, detailed metrics, performance profiling
-4. **Advanced features**: Add filtering, sorting, and search functionality
-5. **Accessibility**: Enhance keyboard navigation and screen reader support
-6. **Performance**: Add data caching and optimization for large agent lists
-7. **Analytics**: Integrate usage tracking and agent performance metrics
+4. **Advanced Workflow Features**: Workflow templating, conditional execution, parallel branches
+5. **Pagination**: Add proper pagination to execution list
+6. **Search**: Full-text search across execution logs
+7. **Accessibility**: Enhance keyboard navigation and screen reader support
+8. **Performance**: Add data caching and optimization for large execution histories
+9. **Analytics**: Integrate usage tracking and workflow performance metrics

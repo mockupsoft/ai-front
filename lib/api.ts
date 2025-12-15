@@ -6,6 +6,8 @@ import type {
   WorkflowTemplate,
   WorkflowUpsertRequest,
   WorkflowValidationResult,
+  WorkflowExecution,
+  ExecutionMetrics,
 } from "@/lib/types/workflows";
 
 const API_BASE =
@@ -433,4 +435,83 @@ export async function updateWorkflow(
   }
 
   return res.json();
+}
+
+export async function fetchWorkflowExecutions(
+  workflowId: string,
+  limit?: number,
+  offset?: number,
+  options?: ApiRequestOptions,
+): Promise<WorkflowExecution[]> {
+  const url = options
+    ? buildScopedUrl(`/workflows/${workflowId}/executions`, options)
+    : resolveUrl(`/workflows/${workflowId}/executions`);
+
+  const urlObj = new URL(url);
+  if (limit) urlObj.searchParams.set("limit", String(limit));
+  if (offset) urlObj.searchParams.set("offset", String(offset));
+
+  const headers = buildHeaders(options);
+  const res = await fetch(urlObj.toString(), { headers });
+
+  if (!res.ok) throw new Error("Failed to fetch workflow executions");
+  return res.json();
+}
+
+export async function fetchWorkflowExecution(
+  executionId: string,
+  options?: ApiRequestOptions,
+): Promise<WorkflowExecution> {
+  return fetcher<WorkflowExecution>(`/executions/${executionId}`, options);
+}
+
+export async function triggerWorkflowExecution(
+  workflowId: string,
+  variables?: Record<string, unknown>,
+  options?: ApiRequestOptions,
+): Promise<WorkflowExecution> {
+  const url = options
+    ? buildScopedUrl(`/workflows/${workflowId}/executions`, options)
+    : resolveUrl(`/workflows/${workflowId}/executions`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ variables: variables ?? {} }),
+  });
+
+  if (!res.ok) throw new Error("Failed to trigger workflow execution");
+  return res.json();
+}
+
+export async function fetchExecutionLogs(
+  executionId: string,
+  stepId?: string,
+  limit?: number,
+  offset?: number,
+  options?: ApiRequestOptions,
+): Promise<string[]> {
+  const path = stepId
+    ? `/executions/${executionId}/steps/${stepId}/logs`
+    : `/executions/${executionId}/logs`;
+
+  const url = options ? buildScopedUrl(path, options) : resolveUrl(path);
+
+  const urlObj = new URL(url);
+  if (limit) urlObj.searchParams.set("limit", String(limit));
+  if (offset) urlObj.searchParams.set("offset", String(offset));
+
+  const headers = buildHeaders(options);
+  const res = await fetch(urlObj.toString(), { headers });
+
+  if (!res.ok) throw new Error("Failed to fetch execution logs");
+  return res.json();
+}
+
+export async function fetchExecutionMetrics(
+  executionId: string,
+  options?: ApiRequestOptions,
+): Promise<ExecutionMetrics> {
+  return fetcher<ExecutionMetrics>(`/executions/${executionId}/metrics`, options);
 }
