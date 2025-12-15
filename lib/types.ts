@@ -180,3 +180,15 @@ export interface AgentContextSnapshot {
   timestamp: number;
   context: Record<string, unknown>;
 }
+
+export interface AgentContextVersion {
+  version: number;
+  timestamp: number;
+  context: Record<string, unknown>;
+}
+
+export interface AgentConfiguration {
+  agentId: string;
+  name?: string;
+  settings?: Record<string, unknown>;
+}

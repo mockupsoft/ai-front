@@ -234,3 +234,104 @@ export async function fetchAgentMessages(
   if (!res.ok) throw new Error("Failed to fetch agent messages");
   return res.json();
 }
+
+export async function fetchAgentContextHistory(
+  agentId: string,
+  options?: ApiRequestOptions
+) {
+  return fetcher(`/agents/${agentId}/context/history`, options);
+}
+
+export async function updateAgentConfig(
+  agentId: string,
+  config: Record<string, unknown>,
+  options?: ApiRequestOptions
+) {
+  const url = options
+    ? buildScopedUrl(`/agents/${agentId}`, options)
+    : resolveUrl(`/agents/${agentId}`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify(config),
+  });
+
+  if (!res.ok) throw new Error("Failed to update agent config");
+  return res.json();
+}
+
+export async function activateAgent(
+  agentId: string,
+  options?: ApiRequestOptions
+) {
+  const url = options
+    ? buildScopedUrl(`/agents/${agentId}/activate`, options)
+    : resolveUrl(`/agents/${agentId}/activate`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+  });
+
+  if (!res.ok) throw new Error("Failed to activate agent");
+  return res.json();
+}
+
+export async function deactivateAgent(
+  agentId: string,
+  options?: ApiRequestOptions
+) {
+  const url = options
+    ? buildScopedUrl(`/agents/${agentId}/deactivate`, options)
+    : resolveUrl(`/agents/${agentId}/deactivate`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+  });
+
+  if (!res.ok) throw new Error("Failed to deactivate agent");
+  return res.json();
+}
+
+export async function shutdownAgent(
+  agentId: string,
+  options?: ApiRequestOptions
+) {
+  const url = options
+    ? buildScopedUrl(`/agents/${agentId}/shutdown`, options)
+    : resolveUrl(`/agents/${agentId}/shutdown`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+  });
+
+  if (!res.ok) throw new Error("Failed to shutdown agent");
+  return res.json();
+}
+
+export async function rollbackAgentContext(
+  agentId: string,
+  contextVersion: number,
+  options?: ApiRequestOptions
+) {
+  const url = options
+    ? buildScopedUrl(`/agents/${agentId}/context/rollback`, options)
+    : resolveUrl(`/agents/${agentId}/context/rollback`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ version: contextVersion }),
+  });
+
+  if (!res.ok) throw new Error("Failed to rollback agent context");
+  return res.json();
+}
