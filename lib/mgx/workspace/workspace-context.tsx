@@ -34,12 +34,10 @@ interface WorkspaceProviderProps {
 
 export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const [state, setState] = useState<WorkspaceContextState>(defaultState);
-  
-  // Use dynamic imports to avoid calling hooks during SSR on static pages
-  const [isMounted, setIsMounted] = useState(false);
-  const router = typeof window !== 'undefined' ? useRouter() : null;
-  const pathname = typeof window !== 'undefined' ? usePathname() : '/';
-  const searchParams = typeof window !== 'undefined' ? useSearchParams() : new URLSearchParams();
+
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Get initial selection from URL params or localStorage
   const getInitialSelection = useCallback(() => {

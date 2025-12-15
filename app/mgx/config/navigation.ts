@@ -7,6 +7,7 @@ import {
   ListChecks,
   Settings,
   Trophy,
+  Workflow,
 } from "lucide-react";
 
 export type NavItem = {
@@ -43,6 +44,11 @@ export const navigationConfig: NavGroup[] = [
         href: "/mgx/results",
         label: "Results",
         icon: Trophy,
+      },
+      {
+        href: "/mgx/workflows",
+        label: "Workflows",
+        icon: Workflow,
       },
       {
         href: "/mgx/agents",
