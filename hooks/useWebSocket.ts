@@ -10,6 +10,8 @@ import type { WebSocketMessage } from "@/lib/types";
 export type WebSocketSubscription = {
   taskId?: string;
   runId?: string;
+  executionId?: string;
+  workflowId?: string;
   topics?: string[];
 };
 
