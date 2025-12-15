@@ -76,6 +76,9 @@ export type WebSocketMessageType =
   | "alert"
   | "agent_message"
   | "agent_action"
+  | "agent_status_changed"
+  | "agent_activity"
+  | "agent_context_updated"
   | "git_metadata_updated"
   | "git_event";
 
@@ -134,3 +137,46 @@ export type GitEvent = {
   repositoryId?: string;
   data?: Record<string, unknown>;
 };
+
+export type AgentStatus = "idle" | "active" | "executing" | "error" | "offline";
+
+export interface AgentDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  capabilities?: string[];
+  version?: string;
+}
+
+export interface AgentInstance {
+  id: string;
+  definitionId: string;
+  name: string;
+  status: AgentStatus;
+  taskId?: string;
+  runId?: string;
+  lastHeartbeat?: number;
+  metrics?: {
+    messagesProcessed?: number;
+    actionsExecuted?: number;
+    errorCount?: number;
+    averageResponseTimeMs?: number;
+  };
+  context?: Record<string, unknown>;
+}
+
+export interface AgentActivityEvent {
+  id: string;
+  agentId: string;
+  agentName: string;
+  type: "status_change" | "action_started" | "action_completed" | "error" | "message";
+  description: string;
+  timestamp: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface AgentContextSnapshot {
+  agentId: string;
+  timestamp: number;
+  context: Record<string, unknown>;
+}

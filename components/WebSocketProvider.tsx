@@ -34,6 +34,18 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       case 'run_failed':
         toast.error('Run failed');
         break;
+      case 'agent_status_changed':
+        // Silently handle agent status changes - UI will update via SWR
+        break;
+      case 'agent_activity':
+        // Silently handle agent activity - UI will consume from context
+        break;
+      case 'agent_message':
+        // Handled by AgentChat component
+        break;
+      case 'agent_context_updated':
+        // Silently handle context updates
+        break;
     }
   }, [lastMessage]);
 

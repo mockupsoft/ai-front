@@ -1,7 +1,9 @@
 # MGX Dashboard Shell Implementation
 
 ## Overview
-This document describes the implementation of the MGX Dashboard Shell for Phase 4.5 Frontend.
+This document describes the implementation of the MGX Dashboard Shell across all phases (4.5-7).
+
+**Latest Update**: Phase 7 - Agent Status UI with Live Telemetry
 
 ## Implemented Features
 
@@ -267,11 +269,59 @@ POST /api/projects/{projectId}/repositories/{repoId}/refresh
 }
 ```
 
+## Phase 7: Agent Status UI with Live Telemetry
+
+### New Types (lib/types.ts)
+- `AgentStatus`: Status union type (idle, active, executing, error, offline)
+- `AgentDefinition`: Agent definition with capabilities and metadata
+- `AgentInstance`: Current agent with status, metrics, and context
+- `AgentActivityEvent`: Single agent event (status change, action, error, message)
+- `AgentContextSnapshot`: Agent execution context at a point in time
+
+### New API Endpoints (lib/api.ts)
+- `fetchAgentInstances()`: List agents with current status and metrics
+- `fetchAgentDefinitions()`: Get available agent definitions
+- `fetchAgentContext(agentId)`: Fetch agent's execution context
+- `fetchAgentMessages(agentId, limit, offset)`: Get agent message history
+
+### New Hook (hooks/useAgents.ts)
+- `useAgents(options?)`: SWR hook for agent list with filtering and derived counts
+- `useAgentForTask(taskId, runId?)`: Get agents for specific task/run
+- Returns: `{ agents, allAgents, counts, isLoading, mutate }`
+
+### New Components (components/mgx/)
+- **agent-status-badge.tsx**: Status indicator with visual indicator dot
+- **agent-status-list.tsx**: List of agents with name, status, and metrics
+- **agent-activity-timeline.tsx**: Real-time activity feed with event types and timestamps
+- **agent-metrics-summary.tsx**: KPI cards with active/idle/error/total counts (compact & full)
+
+### WebSocket Integration
+- New event types: `agent_status_changed`, `agent_activity`, `agent_message`, `agent_context_updated`
+- WebSocketProvider handles events silently, UI updates via SWR hooks
+- Fallback endpoint: `NEXT_PUBLIC_MGX_AGENT_WS_URL` (defaults to `/ws/agents/stream`)
+
+### Enhanced Components
+- **TaskMonitoringView**: Added "Assigned Agents" section with status list and activity timeline
+- **AgentChat**: Fetches message history from backend with IndexedDB fallback
+- **Overview Page**: Agent KPI cards with live counts and activity summary
+
+### Environment Variables
+- `NEXT_PUBLIC_MGX_AGENT_WS_URL`: Optional agent WebSocket endpoint (fallback to main WS URL)
+
+### Tests
+- `__tests__/mgx/agent-status-badge.test.tsx`
+- `__tests__/mgx/agent-status-list.test.tsx`
+- `__tests__/mgx/agent-activity-timeline.test.tsx`
+- `__tests__/mgx/agent-metrics-summary.test.tsx`
+- `__tests__/hooks/useAgents.test.ts`
+- Extended `task-monitoring-view.test.tsx` with agent event handling tests
+
 ## Next Steps
 
 1. **Authentication**: Add real authentication and user management
 2. **Advanced Git Features**: PR status checks, commit history view
-3. **Advanced features**: Add filtering, sorting, and search functionality
-4. **Accessibility**: Enhance keyboard navigation and screen reader support
-5. **Performance**: Add data caching and optimization
-6. **Analytics**: Integrate usage tracking and metrics
+3. **Advanced Agent Features**: Agent debugging, detailed metrics, performance profiling
+4. **Advanced features**: Add filtering, sorting, and search functionality
+5. **Accessibility**: Enhance keyboard navigation and screen reader support
+6. **Performance**: Add data caching and optimization for large agent lists
+7. **Analytics**: Integrate usage tracking and agent performance metrics

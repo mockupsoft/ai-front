@@ -42,11 +42,11 @@ A modern, production-ready admin dashboard built with Next.js 16, React 19, and 
 | API Integration | ✅ COMPLETE | REST API with workspace/project scoping |
 | Responsive Design | ✅ COMPLETE | Mobile/Tablet/Desktop optimized |
 
-**Phase Status**: Phase 4.5 ✅ | Phase 5 ✅ | Phase 6 ✅
+**Phase Status**: Phase 4.5 ✅ | Phase 5 ✅ | Phase 6 ✅ | Phase 7 ✅
 
 ---
 
-## 🎉 What's New in Phase 5-6
+## 🎉 What's New in Phase 5-7
 
 ### 🔗 Phase 5: GitHub Repository Integration
 
@@ -72,6 +72,20 @@ A modern, production-ready admin dashboard built with Next.js 16, React 19, and 
 - **🧭 Enhanced Navigation**: Breadcrumbs and UI always show your current context
 - **🚀 Performance**: Optimized caching and data fetching per project
 - **🎯 Scoped Metrics**: All metrics and analytics calculated per project
+
+### 🤖 Phase 7: Agent Status UI with Live Telemetry
+
+**Monitor multi-agent orchestration with real-time status updates and activity feeds!**
+
+- **📊 Agent KPI Cards**: Dashboard overview with active/idle/error counts
+- **🟢 Agent Status Badges**: Visual status indicators (active, idle, executing, error, offline)
+- **📈 Agent Status List**: Detailed agent roster with metrics per task
+- **⚡ Activity Timeline**: Real-time feed of agent actions and state changes
+- **🔄 Live WebSocket Updates**: Automatic UI refresh for `agent_status_changed`, `agent_activity`, `agent_message`, and `agent_context_updated` events
+- **💾 Message History**: AgentChat hydrates from backend with offline fallback to IndexedDB
+- **🎯 Task-Scoped Agents**: View agents assigned to specific task runs
+- **📱 Responsive Design**: Adapts beautifully to mobile, tablet, and desktop viewports
+- **✅ Comprehensive Tests**: Full coverage for status components and event handling
 
 **Ready to use?** Jump to the [Quick Start Guide](#quick-start-guide) to get started!
 

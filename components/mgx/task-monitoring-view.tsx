@@ -19,11 +19,14 @@ import { PlanApprovalModal } from "@/components/mgx/plan-approval-modal";
 import { ResultsViewer } from "@/components/mgx/results-viewer";
 import { TaskMonitor } from "@/components/mgx/task-monitor";
 import { GitMetadataBadge } from "@/components/mgx/git-metadata-badge";
+import { AgentStatusList } from "@/components/mgx/agent-status-list";
+import { AgentActivityTimeline } from "@/components/mgx/agent-activity-timeline";
 import { AgentChat } from "@/components/AgentChat";
 import { triggerRun } from "@/lib/api";
-import type { RunProgressPayload, TaskPhase, TaskStatus, GitMetadata } from "@/lib/types";
+import type { RunProgressPayload, TaskPhase, TaskStatus, GitMetadata, AgentActivityEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useRun, useTask } from "@/hooks/useTasks";
+import { useAgentForTask } from "@/hooks/useAgents";
 
 function pillVariant(status: TaskStatus) {
   switch (status) {
@@ -82,6 +85,7 @@ function parseRunProgressPayload(payload: unknown): RunProgressPayload {
 export function TaskMonitoringView({ taskId }: { taskId: string }) {
   const { task, isLoading: isTaskLoading, mutate: mutateTask } = useTask(taskId);
   const { run, isLoading: isRunLoading, mutate: mutateRun } = useRun(taskId, task?.currentRunId);
+  const { agents, isLoading: isAgentsLoading, mutate: mutateAgents } = useAgentForTask(taskId, task?.currentRunId);
   const { lastMessage, subscribe } = useWebSocket();
 
   const [activeTab, setActiveTab] = React.useState<TabId>("plan");
@@ -93,6 +97,7 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
   const [liveEtaSeconds, setLiveEtaSeconds] = React.useState<number | undefined>(undefined);
   const [liveLogs, setLiveLogs] = React.useState<string[]>([]);
   const [gitMetadata, setGitMetadata] = React.useState<GitMetadata | undefined>(undefined);
+  const [agentActivityEvents, setAgentActivityEvents] = React.useState<AgentActivityEvent[]>([]);
 
   React.useEffect(() => {
     subscribe?.({ taskId, runId: task?.currentRunId });
@@ -126,6 +131,30 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
       }
     }
 
+    if (lastMessage.type === "agent_status_changed" || lastMessage.type === "agent_activity") {
+      mutateAgents();
+    }
+
+    if (lastMessage.type === "agent_activity") {
+      const payload = lastMessage.payload as Partial<AgentActivityEvent>;
+      if (payload && typeof payload === "object") {
+        const event: AgentActivityEvent = {
+          id: `${Date.now()}-${Math.random()}`,
+          agentId: payload.agentId || "",
+          agentName: payload.agentName || "Unknown Agent",
+          type: payload.type || "message",
+          description: payload.description || "",
+          timestamp: payload.timestamp || Date.now(),
+          metadata: payload.metadata,
+        };
+        setAgentActivityEvents((prev) => {
+          const next = [event, ...prev];
+          if (next.length > 50) return next.slice(0, 50);
+          return next;
+        });
+      }
+    }
+
     if (lastMessage.type !== "run_progress") return;
 
     const progressPayload = parseRunProgressPayload(lastMessage.payload);
@@ -143,7 +172,7 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
         return next;
       });
     }
-  }, [lastMessage, mutateRun, mutateTask, run?.id, taskId]);
+  }, [lastMessage, mutateRun, mutateTask, mutateAgents, run?.id, taskId]);
 
   const handleTriggerRun = async () => {
     try {
@@ -208,6 +237,42 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
         startedAt={run?.createdAt}
         etaSeconds={liveEtaSeconds}
       />
+
+      {task.currentRunId && (
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle>Assigned Agents</CardTitle>
+              <CardDescription>
+                Live status and activity of agents assigned to this task.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-50 mb-3">
+                  Agent Status
+                </h3>
+                <AgentStatusList
+                  agents={agents}
+                  isLoading={isAgentsLoading}
+                />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-50 mb-3">
+                  Activity Feed
+                </h3>
+                <AgentActivityTimeline
+                  events={agentActivityEvents}
+                  isLoading={isAgentsLoading}
+                  maxItems={8}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {task.currentRunId && (
         <Card>
