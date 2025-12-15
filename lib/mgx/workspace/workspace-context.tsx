@@ -34,20 +34,12 @@ interface WorkspaceProviderProps {
 
 export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   const [state, setState] = useState<WorkspaceContextState>(defaultState);
-  // Use hooks safely - they may not be available during SSR/build
-  let router: ReturnType<typeof useRouter> | null = null;
-  let pathname: string = '/';
-  let searchParams: URLSearchParams | null = null;
   
-  try {
-    router = useRouter();
-    pathname = usePathname();
-    searchParams = useSearchParams();
-  } catch (error) {
-    // During SSR/build, these hooks may not be available
-    // Use defaults that won't cause errors
-    console.warn('WorkspaceProvider: Navigation hooks not available during build');
-  }
+  // Use dynamic imports to avoid calling hooks during SSR on static pages
+  const [isMounted, setIsMounted] = useState(false);
+  const router = typeof window !== 'undefined' ? useRouter() : null;
+  const pathname = typeof window !== 'undefined' ? usePathname() : '/';
+  const searchParams = typeof window !== 'undefined' ? useSearchParams() : new URLSearchParams();
 
   // Get initial selection from URL params or localStorage
   const getInitialSelection = useCallback(() => {
@@ -79,11 +71,11 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       }));
 
       return workspaces;
-    } catch (error) {
-      console.error("Failed to fetch workspaces:", error);
+    } catch (err) {
+      console.error("Failed to fetch workspaces:", err);
       setState((prev) => ({
         ...prev,
-        error: error as Error,
+        error: err as Error,
         isLoadingWorkspaces: false,
       }));
       return [];

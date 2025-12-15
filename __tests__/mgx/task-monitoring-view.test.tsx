@@ -4,12 +4,20 @@ import * as sonner from "sonner";
 
 import { TaskMonitoringView } from "@/components/mgx/task-monitoring-view";
 import * as taskHooks from "@/hooks/useTasks";
+import * as agentHooks from "@/hooks/useAgents";
 import * as wsProvider from "@/components/WebSocketProvider";
 
 jest.mock("@/hooks/useTasks");
+jest.mock("@/hooks/useAgents");
 jest.mock("@/components/WebSocketProvider");
 jest.mock("@/components/AgentChat", () => ({
   AgentChat: () => <div>Agent Chat Mock</div>,
+}));
+jest.mock("@/components/mgx/agent-status-list", () => ({
+  AgentStatusList: () => <div>Agent Status List Mock</div>,
+}));
+jest.mock("@/components/mgx/agent-activity-timeline", () => ({
+  AgentActivityTimeline: () => <div>Agent Activity Timeline Mock</div>,
 }));
 jest.mock("react-syntax-highlighter", () => ({
   Prism: ({ children }: { children: React.ReactNode }) => <pre>{children}</pre>,
@@ -52,6 +60,15 @@ describe("TaskMonitoringView", () => {
       isConnected: true,
       subscribe: jest.fn(),
       sendMessage: jest.fn(),
+    });
+
+    (agentHooks.useAgentForTask as jest.Mock).mockReturnValue({
+      agents: [],
+      allAgents: [],
+      counts: { total: 0, active: 0, idle: 0, executing: 0, error: 0, offline: 0 },
+      isLoading: false,
+      isError: false,
+      mutate: jest.fn(),
     });
   });
 
@@ -113,5 +130,84 @@ describe("TaskMonitoringView", () => {
       const mockToast = sonner.toast as jest.Mocked<typeof sonner.toast>;
       expect(mockToast.success).toHaveBeenCalledWith("Git metadata updated");
     });
+  });
+
+  it("handles agent status change events", async () => {
+    const mutateMock = jest.fn();
+    (agentHooks.useAgentForTask as jest.Mock).mockReturnValue({
+      agents: [],
+      allAgents: [],
+      counts: { total: 0, active: 0, idle: 0, executing: 0, error: 0, offline: 0 },
+      isLoading: false,
+      isError: false,
+      mutate: mutateMock,
+    });
+
+    const agentMessage = {
+      type: "agent_status_changed",
+      payload: {
+        agentId: "agent-1",
+        status: "active",
+      },
+    };
+
+    const wsMockModule = wsProvider as unknown as { useWebSocket: jest.Mock };
+    wsMockModule.useWebSocket.mockReturnValue({
+      lastMessage: agentMessage,
+      isConnected: true,
+      subscribe: jest.fn(),
+    });
+
+    render(<TaskMonitoringView taskId="1" />);
+
+    await waitFor(() => {
+      expect(mutateMock).toHaveBeenCalled();
+    });
+  });
+
+  it("handles agent activity events", async () => {
+    const mutateMock = jest.fn();
+    (agentHooks.useAgentForTask as jest.Mock).mockReturnValue({
+      agents: [],
+      allAgents: [],
+      counts: { total: 0, active: 0, idle: 0, executing: 0, error: 0, offline: 0 },
+      isLoading: false,
+      isError: false,
+      mutate: mutateMock,
+    });
+
+    const agentMessage = {
+      type: "agent_activity",
+      payload: {
+        agentId: "agent-1",
+        agentName: "Analysis Agent",
+        type: "action_completed",
+        description: "Completed analysis",
+        timestamp: Date.now(),
+      },
+    };
+
+    const wsMockModule = wsProvider as unknown as { useWebSocket: jest.Mock };
+    wsMockModule.useWebSocket.mockReturnValue({
+      lastMessage: agentMessage,
+      isConnected: true,
+      subscribe: jest.fn(),
+    });
+
+    render(<TaskMonitoringView taskId="1" />);
+
+    await waitFor(() => {
+      expect(mutateMock).toHaveBeenCalled();
+      expect(screen.getByText("Agent Status List Mock")).toBeInTheDocument();
+      expect(screen.getByText("Agent Activity Timeline Mock")).toBeInTheDocument();
+    });
+  });
+
+  it("renders agent status and activity sections", () => {
+    render(<TaskMonitoringView taskId="1" />);
+
+    expect(screen.getByText("Assigned Agents")).toBeInTheDocument();
+    expect(screen.getByText("Agent Status List Mock")).toBeInTheDocument();
+    expect(screen.getByText("Agent Activity Timeline Mock")).toBeInTheDocument();
   });
 });

@@ -3,7 +3,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useWebSocket } from '@/components/WebSocketProvider';
 import { getAgentMessages, saveAgentMessage } from '@/lib/storage';
+import { fetchAgentMessages } from '@/lib/api';
 import type { AgentMessage } from '@/lib/types';
+import { useWorkspace } from '@/lib/mgx/workspace/workspace-context';
 import { cn } from '@/lib/utils';
 import { Loader2, CheckCircle, AlertCircle, Lightbulb } from 'lucide-react';
 
@@ -18,10 +20,36 @@ export function AgentChat({ taskId, runId, isRunning = false }: AgentChatProps) 
   const [isLoading, setIsLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { lastMessage, isConnected } = useWebSocket();
+  const { currentWorkspace, currentProject } = useWorkspace();
 
   useEffect(() => {
     const loadMessages = async () => {
       try {
+        // Try to fetch from backend first
+        try {
+          const backendMessages = await fetchAgentMessages(
+            taskId,
+            100, // limit
+            0,   // offset
+            {
+              workspaceId: currentWorkspace?.id,
+              projectId: currentProject?.id,
+            }
+          );
+          if (backendMessages && Array.isArray(backendMessages)) {
+            const sorted = backendMessages.sort((a: AgentMessage, b: AgentMessage) => a.timestamp - b.timestamp);
+            setMessages(sorted);
+            // Save to local cache for offline resilience
+            for (const msg of sorted) {
+              await saveAgentMessage(msg).catch(console.error);
+            }
+            return;
+          }
+        } catch (error) {
+          console.warn('Failed to fetch from backend, falling back to local storage:', error);
+        }
+
+        // Fallback to local storage
         const stored = await getAgentMessages(taskId, runId);
         setMessages(stored.sort((a, b) => a.timestamp - b.timestamp));
       } catch (error) {
@@ -32,7 +60,7 @@ export function AgentChat({ taskId, runId, isRunning = false }: AgentChatProps) 
     };
 
     loadMessages();
-  }, [taskId, runId]);
+  }, [taskId, runId, currentWorkspace?.id, currentProject?.id]);
 
   useEffect(() => {
     if (!lastMessage) return;

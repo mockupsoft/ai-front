@@ -198,3 +198,39 @@ export async function refreshRepositoryMetadata(
   if (!res.ok) throw new Error("Failed to refresh repository metadata");
   return res.json();
 }
+
+export async function fetchAgentInstances(options?: ApiRequestOptions) {
+  return fetcher("/agents", options);
+}
+
+export async function fetchAgentDefinitions(options?: ApiRequestOptions) {
+  return fetcher("/agents/definitions", options);
+}
+
+export async function fetchAgentContext(
+  agentId: string,
+  options?: ApiRequestOptions
+) {
+  return fetcher(`/agents/${agentId}/context`, options);
+}
+
+export async function fetchAgentMessages(
+  agentId: string,
+  limit?: number,
+  offset?: number,
+  options?: ApiRequestOptions
+) {
+  const url = options
+    ? buildScopedUrl(`/agents/${agentId}/messages`, options)
+    : resolveUrl(`/agents/${agentId}/messages`);
+  
+  const urlObj = new URL(url);
+  if (limit) urlObj.searchParams.set("limit", String(limit));
+  if (offset) urlObj.searchParams.set("offset", String(offset));
+  
+  const headers = buildHeaders(options);
+  const res = await fetch(urlObj.toString(), { headers });
+  
+  if (!res.ok) throw new Error("Failed to fetch agent messages");
+  return res.json();
+}
