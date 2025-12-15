@@ -1,4 +1,12 @@
 import { MGX_API_BASE_URL } from "@/lib/mgx/env";
+import type { AgentDefinition, AgentInstance } from "@/lib/types";
+import type {
+  Workflow,
+  WorkflowSummary,
+  WorkflowTemplate,
+  WorkflowUpsertRequest,
+  WorkflowValidationResult,
+} from "@/lib/types/workflows";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_MGX_API_BASE_URL ??
@@ -199,12 +207,16 @@ export async function refreshRepositoryMetadata(
   return res.json();
 }
 
-export async function fetchAgentInstances(options?: ApiRequestOptions) {
-  return fetcher("/agents", options);
+export async function fetchAgentInstances(
+  options?: ApiRequestOptions,
+): Promise<AgentInstance[]> {
+  return fetcher<AgentInstance[]>("/agents", options);
 }
 
-export async function fetchAgentDefinitions(options?: ApiRequestOptions) {
-  return fetcher("/agents/definitions", options);
+export async function fetchAgentDefinitions(
+  options?: ApiRequestOptions,
+): Promise<AgentDefinition[]> {
+  return fetcher<AgentDefinition[]>("/agents/definitions", options);
 }
 
 export async function fetchAgentContext(
@@ -333,5 +345,92 @@ export async function rollbackAgentContext(
   });
 
   if (!res.ok) throw new Error("Failed to rollback agent context");
+  return res.json();
+}
+
+export async function fetchWorkflows(
+  options?: ApiRequestOptions,
+): Promise<WorkflowSummary[]> {
+  return fetcher<WorkflowSummary[]>("/workflows", options);
+}
+
+export async function fetchWorkflow(
+  workflowId: string,
+  options?: ApiRequestOptions,
+): Promise<Workflow> {
+  return fetcher<Workflow>(`/workflows/${workflowId}`, options);
+}
+
+export async function fetchWorkflowTemplates(
+  options?: ApiRequestOptions,
+): Promise<WorkflowTemplate[]> {
+  return fetcher<WorkflowTemplate[]>("/workflows/templates", options);
+}
+
+export async function validateWorkflowDefinition(
+  definition: WorkflowUpsertRequest["definition"],
+  options?: ApiRequestOptions,
+): Promise<WorkflowValidationResult> {
+  const url = options
+    ? buildScopedUrl("/workflows/validate", options)
+    : resolveUrl("/workflows/validate");
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ definition }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.message || "Failed to validate workflow");
+  }
+
+  return res.json();
+}
+
+export async function createWorkflow(
+  payload: WorkflowUpsertRequest,
+  options?: ApiRequestOptions,
+): Promise<Workflow> {
+  const url = options ? buildScopedUrl("/workflows", options) : resolveUrl("/workflows");
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.message || "Failed to create workflow");
+  }
+
+  return res.json();
+}
+
+export async function updateWorkflow(
+  workflowId: string,
+  payload: WorkflowUpsertRequest,
+  options?: ApiRequestOptions,
+): Promise<Workflow> {
+  const url = options
+    ? buildScopedUrl(`/workflows/${workflowId}`, options)
+    : resolveUrl(`/workflows/${workflowId}`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.message || "Failed to update workflow");
+  }
+
   return res.json();
 }
