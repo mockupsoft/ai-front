@@ -1,7 +1,6 @@
 import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { ExecutionLogPanel } from "@/components/mgx/execution-log-panel";
-import * as api from "@/lib/api";
 import useSWR from "swr";
 
 jest.mock("@/lib/api");
@@ -93,7 +92,6 @@ describe("ExecutionLogPanel", () => {
   });
 
   it("fetches logs with correct parameters", () => {
-    const mockFetcher = jest.fn();
     (useSWR as jest.Mock).mockReturnValue({
       data: [],
       isLoading: false,

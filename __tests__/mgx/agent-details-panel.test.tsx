@@ -5,7 +5,7 @@ import type { AgentInstance } from "@/lib/types";
 
 jest.mock("swr", () => ({
   __esModule: true,
-  default: jest.fn((key, fetcher) => ({
+  default: jest.fn(() => ({
     data: {
       context: { test: "value" },
       timestamp: Date.now(),

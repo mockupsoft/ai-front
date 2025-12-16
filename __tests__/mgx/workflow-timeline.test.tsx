@@ -143,7 +143,7 @@ describe("WorkflowTimeline", () => {
   });
 
   it("toggles step expansion on click", () => {
-    const { rerender } = render(<WorkflowTimeline execution={mockExecution} />);
+    render(<WorkflowTimeline execution={mockExecution} />);
     const step1 = screen.getByText("Step 1");
     const stepContainer = step1.closest("div[class*='cursor-pointer']")!;
 

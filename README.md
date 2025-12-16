@@ -5,10 +5,12 @@ A modern, production-ready admin dashboard built with Next.js 16, React 19, and 
 ## 📑 Table of Contents
 
 - [Project Status](#-project-status)
-- [What's New in Phase 5-6](#-whats-new-in-phase-5-6)
+- [What's New - Phase 10: Workflow Builder & Timeline Monitor](#-whats-new---phase-10-workflow-builder--timeline-monitor)
 - [Phase 4.5: Core Dashboard](#-phase-45-frontend-deliverables)
 - [Phase 5: GitHub Repository Integration](#-phase-5-github-repository-integration)
 - [Phase 6: Workspace & Project Management](#-phase-6-workspace--project-management)
+- [Phase 7: Agent Status UI](#-phase-7-agent-status-ui-with-live-telemetry)
+- [Phase 8-10: Workflow System](#-phase-8-10-workflow-builder--timeline-monitor)
 - [Complete Architecture Overview](#-complete-architecture-overview)
 - [Getting Started](#-getting-started)
   - [Quick Start Guide](#quick-start-guide)
@@ -38,15 +40,101 @@ A modern, production-ready admin dashboard built with Next.js 16, React 19, and 
 | Real-time Monitoring | ✅ LIVE | WebSocket integration with live updates |
 | Git Integration | ✅ LIVE | GitHub repos, branches, commits, PRs |
 | Workspace Support | ✅ LIVE | Multi-tenant UI with data isolation |
-| Real-time Sync | ✅ ACTIVE | WebSocket events for git & workspace |
+| Agent Management | ✅ LIVE | Multi-agent orchestration with live telemetry |
+| **Workflow Builder** | ✅ **NEW** | **Visual drag-and-drop workflow composer** |
+| **Workflow Timeline Monitor** | ✅ **NEW** | **Real-time execution tracking with Gantt charts** |
 | API Integration | ✅ COMPLETE | REST API with workspace/project scoping |
 | Responsive Design | ✅ COMPLETE | Mobile/Tablet/Desktop optimized |
 
-**Phase Status**: Phase 4.5 ✅ | Phase 5 ✅ | Phase 6 ✅ | Phase 7 ✅
+**Phase Status**: Phase 4.5 ✅ | Phase 5 ✅ | Phase 6 ✅ | Phase 7 ✅ | **Phase 8-10 ✅ NEW**
 
 ---
 
-## 🎉 What's New in Phase 5-7
+## 🎉 What's New - Phase 10: Workflow Builder & Timeline Monitor
+
+**Compose, visualize, and monitor multi-step workflows with a complete visual workflow system!**
+
+### 🎨 Visual Workflow Builder
+
+Create complex multi-step workflows with an intuitive drag-and-drop interface:
+
+- **🖱️ Interactive Canvas**: Drag-and-drop workflow composition with zoom/pan (40%-250%)
+- **🧩 Step Palette**: 5 step types (agent_task, script, condition, http_request, delay)
+- **🔗 Dependency Editor**: Visual connection of steps with directional arrows
+- **⚙️ Step Configuration**: Configure agents, timeouts, retries, and fallback steps
+- **📝 Variable Management**: Define workflow-level variables (JSON editor)
+- **✅ Real-time Validation**: Validate workflows before saving with detailed error messages
+- **📚 Template System**: Start from pre-defined workflow patterns
+- **💾 Auto-save Prevention**: Explicit save to prevent accidental data loss
+
+### 📊 Workflow Timeline Monitor
+
+Monitor workflow executions in real-time with comprehensive visualizations:
+
+- **📈 Gantt Timeline**: Proportional duration bars showing concurrent step execution
+- **🎨 Status Indicators**: Color-coded steps (green=completed, red=failed, blue=running, amber=retrying)
+- **🔄 Retry Tracking**: Visual indicators for retry attempts with badge counts
+- **💾 Step Details**: Expandable panels showing outputs, errors, and agent assignments
+- **📊 Performance Metrics**: 4-card dashboard (duration, success rate, steps completed, retries)
+- **📜 Live Log Streaming**: Real-time logs with auto-scroll and monospace formatting
+- **⚡ WebSocket Updates**: Instant UI updates for step starts, completions, failures
+- **🔍 Error Diagnostics**: Inline error messages with stack traces for failed steps
+
+### 🚀 Key Features
+
+- **Multi-step Orchestration**: Chain multiple agents and scripts in complex workflows
+- **Parallel Execution**: Steps with no dependencies run concurrently
+- **Conditional Logic**: Branch workflow paths based on step outputs
+- **Error Handling**: Configure retries, timeouts, and fallback steps per step
+- **Agent Integration**: Assign AI agents to workflow steps for intelligent automation
+- **Real-time Monitoring**: Watch workflows execute live with 1-second refresh intervals
+- **Historical Analysis**: Review past executions with full timeline replay
+- **Workspace Scoping**: All workflows isolated per project with workspace/project context
+
+### 📦 New Components (14 total)
+
+**Workflow Builder:**
+- `WorkflowBuilder` - Main builder container with validation
+- `WorkflowCanvas` - Interactive drag-and-drop canvas (2400x2400px)
+- `WorkflowStepPalette` - Step type selector
+- `WorkflowStepPanel` - Step configuration editor
+- `WorkflowTemplatePicker` - Template selection UI
+- `WorkflowList` - Workflow listing with search/filter
+
+**Workflow Timeline:**
+- `WorkflowTimeline` - Gantt-style execution visualization
+- `WorkflowExecutionList` - Execution history table
+- `ExecutionMetricsCards` - Performance metrics (4-card grid)
+- `ExecutionLogPanel` - Live log streaming viewer
+
+**Routes:**
+- `/mgx/workflows` - Workflow list
+- `/mgx/workflows/new` - Create new workflow
+- `/mgx/workflows/[id]/builder` - Visual builder
+- `/mgx/workflows/[workflowId]/executions` - Execution list
+- `/mgx/workflows/[workflowId]/executions/[executionId]` - Timeline monitor
+
+### 🎯 Documentation
+
+Comprehensive user guides and API documentation:
+
+- **[Workflow Builder User Guide](./docs/WORKFLOW_BUILDER.md)** - Complete visual builder documentation
+- **[Workflow Timeline Monitor Guide](./docs/WORKFLOW_TIMELINE.md)** - Execution monitoring and log inspection
+- **[Workflow API Integration](./docs/WORKFLOW_API.md)** - REST API endpoints and WebSocket events
+- **[Component Library Reference](./docs/COMPONENTS.md)** - Props, usage patterns, and testing
+
+### ✅ Testing
+
+Comprehensive test coverage for workflow system:
+
+- **Unit Tests**: 57+ tests for workflow components
+- **Integration Tests**: Hook composition and state transitions
+- **E2E Tests**: Playwright scenarios for builder and timeline
+- **API Mocking**: MSW handlers for workflow endpoints
+
+**Ready to build workflows?** Check out the [Workflow Builder Guide](./docs/WORKFLOW_BUILDER.md)!
+
+---
 
 ### 🔗 Phase 5: GitHub Repository Integration
 
@@ -542,6 +630,427 @@ Workspace: Acme Corp / Project: Mobile App / Tasks / Task #123
 - ✅ Responsive design
 - ✅ Comprehensive tests
 - ✅ Updated documentation
+
+---
+
+## 📦 Phase 8-10: Workflow Builder & Timeline Monitor
+
+### Overview
+
+Phase 8-10 delivers a complete visual workflow system for creating, executing, and monitoring multi-step automation workflows. This includes a drag-and-drop builder, real-time execution monitoring, and comprehensive API integration.
+
+### ✅ Workflow Builder UI (Phase 9)
+
+#### Visual Canvas Editor
+
+**WorkflowCanvas Component** (`components/mgx/workflow-canvas.tsx`)
+- **Interactive canvas**: 2400x2400px with zoom/pan controls
+- **Drag-and-drop**: Position steps visually on canvas
+- **Edge drawing**: Click source → click target to create dependencies
+- **Zoom controls**: 40%-250% with mouse wheel
+- **Pan controls**: Click and drag empty space
+- **Grid background**: 22x22px dotted grid for alignment
+
+**Key Features:**
+```typescript
+interface WorkflowCanvasProps {
+  steps: WorkflowStep[];              // Workflow steps to render
+  edges: WorkflowEdge[];              // Dependency connections
+  selectedStepId?: string;            // Currently selected step
+  linkingFromStepId?: string | null;  // Linking mode source
+  issuesByStepId?: Record<string, number>; // Validation issues
+  view: WorkflowCanvasView;           // Zoom/pan state
+  onChangeView: (view) => void;       // Update viewport
+  onSelectStep: (id) => void;         // Step selection
+  onMoveStep: (id, pos) => void;      // Step repositioning
+  onDropNewStep: (type, pos) => void; // Add new step
+  onCreateEdge: (from, to) => void;   // Create dependency
+}
+```
+
+#### Step Configuration Panel
+
+**WorkflowStepPanel Component** (`components/mgx/workflow-step-panel.tsx`)
+- **Step properties**: Name, type, description
+- **Agent selection**: Dropdown of available agents (for agent_task steps)
+- **Timeout configuration**: 1-3600 seconds (default: 300)
+- **Retry settings**: 0-5 retries (default: 0)
+- **Fallback step**: Optional step to run on failure
+- **Variable bindings**: JSON editor for input mappings
+- **Validation display**: Shows step-specific validation errors
+
+**Configuration Schema:**
+```typescript
+interface WorkflowStep {
+  id: string;
+  type: WorkflowStepType;
+  name: string;
+  description?: string;
+  position: { x: number; y: number };
+  agentId?: string;
+  timeoutSeconds?: number;
+  retries?: number;
+  fallbackStepId?: string;
+  bindings?: Record<string, string>;
+}
+```
+
+#### Step Palette
+
+**WorkflowStepPalette Component** (`components/mgx/workflow-step-palette.tsx`)
+- **agent_task**: Execute task with AI agent
+- **script**: Run custom script or code
+- **condition**: Conditional branching
+- **http_request**: Make HTTP API call
+- **delay**: Wait for duration
+
+**Usage:**
+- Click step type to add at default position
+- Drag step type to canvas to place at specific position
+
+#### Variable Editor
+
+**Workflow Variables Section** (`WorkflowBuilder` component)
+- JSON editor for workflow-level variables
+- Real-time validation with error display
+- Variable types: string, number, boolean, json
+- Default values supported
+- Reference syntax: `{{workflow.variableName}}`
+
+**Example:**
+```json
+[
+  {
+    "name": "userEmail",
+    "type": "string",
+    "description": "Email address of user",
+    "defaultValue": "user@example.com"
+  }
+]
+```
+
+#### Validation System
+
+**Validation API** (`POST /workflows/validate`)
+- Detects circular dependencies
+- Validates agent references
+- Checks timeout ranges
+- Verifies variable references
+- Identifies unreachable steps
+
+**Validation Result:**
+```typescript
+interface WorkflowValidationResult {
+  valid: boolean;
+  issues: WorkflowValidationIssue[];
+}
+
+interface WorkflowValidationIssue {
+  message: string;
+  severity: "error" | "warning";
+  code?: string;
+  stepId?: string;
+  path?: string;
+}
+```
+
+#### Template System
+
+**WorkflowTemplatePicker Component** (`components/mgx/workflow-template-picker.tsx`)
+- Browse pre-defined workflow templates
+- Load template as starting point
+- Common patterns: Data Pipeline, API Integration, etc.
+- Read-only reference (creates new workflow on use)
+
+### ✅ Workflow Timeline Monitor (Phase 8/10)
+
+#### Gantt Timeline Visualization
+
+**WorkflowTimeline Component** (`components/mgx/workflow-timeline.tsx`)
+- **Proportional duration bars**: Bar width = (step duration / total duration) × 100%
+- **Status color coding**:
+  - 🟢 Green: Completed successfully
+  - 🔴 Red: Failed (after retries)
+  - 🔵 Blue: Currently running
+  - 🟡 Amber: Retrying after failure
+  - ⚪ Gray: Pending (not started)
+  - ⚫ Dark gray: Skipped (conditional)
+- **Concurrent execution**: Overlapping bars show parallel steps
+- **Retry indicators**: Badge showing retry count + markers for attempts
+- **Error display**: Inline error messages for failed steps
+- **Agent display**: Shows assigned agent ID for each step
+
+**Example Timeline:**
+```
+Step 1  ████████████████████ (completed, 2.5s)
+Step 2       ████████████ (running, 1.2s / 3.0s)
+Step 3       ████████ (pending)
+Step 4                   ████ (waiting for Step 2)
+```
+
+#### Execution Metrics Cards
+
+**ExecutionMetricsCards Component** (`components/mgx/execution-metrics-cards.tsx`)
+
+4-card grid displaying real-time metrics:
+1. **Total Duration**: Total time from start to completion
+2. **Success Rate**: Percentage of steps completed successfully
+3. **Steps Completed**: Fraction (8/10) with progress indicator
+4. **Retries**: Total retry count across all steps
+
+**Updates:** Auto-refresh every 1 second during execution
+
+#### Live Log Streaming
+
+**ExecutionLogPanel Component** (`components/mgx/execution-log-panel.tsx`)
+- **Real-time logs**: Refresh every 500ms
+- **Auto-scroll**: Automatically scroll to newest logs
+- **Monospace formatting**: Preserves log structure
+- **Step filtering**: View logs for all steps or specific step
+- **Max height**: 400px with scrollable container
+
+**Log Format:**
+```
+[2024-12-16 14:23:45] [step_abc] [INFO] Fetching data from API...
+[2024-12-16 14:23:46] [step_abc] [INFO] Received 150 records
+[2024-12-16 14:23:47] [step_abc] [SUCCESS] Data fetch completed
+```
+
+#### Execution List
+
+**WorkflowExecutionList Component** (`components/mgx/workflow-execution-list.tsx`)
+- Sortable table of executions
+- Status pills (completed, failed, running, pending)
+- Duration and step completion ratio
+- Links to timeline detail pages
+- Pagination support (via API limit/offset)
+
+### 🔌 API Integration
+
+#### Workflow Management Endpoints
+
+```typescript
+// List workflows
+GET /workflows
+Response: WorkflowSummary[]
+
+// Get workflow definition
+GET /workflows/{id}
+Response: Workflow
+
+// Create workflow
+POST /workflows
+Body: { name, description, definition }
+Response: Workflow
+
+// Update workflow
+PUT /workflows/{id}
+Body: { name, description, definition }
+Response: Workflow
+
+// Validate workflow
+POST /workflows/validate
+Body: { definition }
+Response: WorkflowValidationResult
+
+// Get templates
+GET /workflows/templates
+Response: WorkflowTemplate[]
+```
+
+#### Execution Endpoints
+
+```typescript
+// List executions
+GET /workflows/{id}/executions?limit=50&offset=0
+Response: WorkflowExecution[]
+
+// Get execution details
+GET /executions/{id}
+Response: WorkflowExecution
+
+// Trigger execution
+POST /workflows/{id}/executions
+Body: { variables: {...} }
+Response: WorkflowExecution
+
+// Get execution logs
+GET /executions/{id}/logs?limit=100&offset=0
+Response: string[]
+
+// Get step logs
+GET /executions/{id}/steps/{stepId}/logs
+Response: string[]
+
+// Get execution metrics
+GET /executions/{id}/metrics
+Response: ExecutionMetrics
+```
+
+### 🔄 WebSocket Real-time Updates
+
+#### Event Types
+
+```typescript
+type WorkflowEventType =
+  | "workflow_execution_started"
+  | "workflow_step_started"
+  | "workflow_step_completed"
+  | "workflow_step_failed"
+  | "workflow_step_retrying"
+  | "workflow_execution_completed"
+  | "workflow_execution_failed"
+  | "workflow_log_entry";
+
+interface WorkflowEvent {
+  type: WorkflowEventType;
+  executionId: string;
+  stepId?: string;
+  timestamp: number;
+  data?: Record<string, unknown>;
+}
+```
+
+#### Event Handling
+
+```typescript
+const { subscribe } = useWebSocket();
+
+useEffect(() => {
+  const subscription = subscribe({
+    executionId: "exec_123",
+    workflowId: "wf_789",
+    topics: ["workflow_events"]
+  });
+
+  // UI updates via SWR hooks
+  // Real-time timeline refresh
+  // Live log streaming
+  // Instant status updates
+
+  return () => unsubscribe(subscription);
+}, [executionId]);
+```
+
+### 🪝 Custom Hooks
+
+#### useWorkflows
+
+```typescript
+const { workflows, isLoading, error, mutate } = useWorkflows();
+// - Auto-caching per workspace/project
+// - Revalidates on focus
+// - 5s deduplication interval
+```
+
+#### useWorkflowExecution
+
+```typescript
+const { execution, isLoading, error, mutate } = useWorkflowExecution(executionId);
+// - Auto-refresh every 1 second
+// - Real-time execution monitoring
+// - Stops refreshing when complete
+```
+
+#### useExecutionMetrics
+
+```typescript
+const { metrics, isLoading, error, mutate } = useExecutionMetrics(executionId);
+// - Auto-refresh every 1 second
+// - Live metrics during execution
+```
+
+### 🗂️ TypeScript Types
+
+All workflow types fully documented with JSDoc comments:
+
+```typescript
+// Core workflow types
+WorkflowStepType
+WorkflowVariable
+WorkflowStep
+WorkflowEdge
+WorkflowDefinition
+Workflow
+WorkflowTemplate
+
+// Execution types
+WorkflowExecutionStatus
+StepExecutionStatus
+StepExecution
+WorkflowExecution
+ExecutionMetrics
+
+// Validation types
+WorkflowValidationResult
+WorkflowValidationIssue
+
+// Event types
+WorkflowEventType
+WorkflowEvent
+```
+
+See `lib/types/workflows.ts` for complete definitions with JSDoc.
+
+### 🧪 Testing
+
+**Test Coverage:**
+- `workflow-builder.test.tsx` - Builder component rendering and interactions
+- `workflow-canvas.test.tsx` - Canvas drag-and-drop and zoom/pan
+- `workflow-timeline.test.tsx` - Timeline rendering and status display (15 tests)
+- `workflow-execution-list.test.tsx` - Execution list filtering and sorting (11 tests)
+- `execution-metrics-cards.test.tsx` - Metrics display and formatting (13 tests)
+- `execution-log-panel.test.tsx` - Log rendering and streaming (14 tests)
+- `workflow-execution-integration.test.tsx` - Hook integration (4 tests)
+- `e2e/workflow-execution.spec.ts` - End-to-end scenarios (3 tests)
+
+**Total:** 60+ tests covering workflow system
+
+### 📖 Documentation
+
+Comprehensive documentation created:
+- **[Workflow Builder User Guide](./docs/WORKFLOW_BUILDER.md)** - Complete builder documentation
+- **[Workflow Timeline Monitor Guide](./docs/WORKFLOW_TIMELINE.md)** - Execution monitoring guide
+- **[Workflow API Integration](./docs/WORKFLOW_API.md)** - REST API and WebSocket reference
+- **[Component Library Reference](./docs/COMPONENTS.md)** - Component props and patterns
+
+### ✅ Phase 8-10 Checklist
+
+**Workflow Builder:**
+- ✅ Visual drag-and-drop canvas
+- ✅ Step palette with 5 step types
+- ✅ Step configuration panel
+- ✅ Dependency editor (visual linking)
+- ✅ Variable editor (JSON)
+- ✅ Template system
+- ✅ Real-time validation
+- ✅ Save/update workflows
+
+**Workflow Timeline:**
+- ✅ Gantt-style timeline visualization
+- ✅ Status color coding
+- ✅ Retry indicators
+- ✅ Performance metrics cards
+- ✅ Live log streaming
+- ✅ Execution list with filtering
+- ✅ Step details panel
+- ✅ Error diagnostics
+
+**API & Integration:**
+- ✅ REST API endpoints (9 total)
+- ✅ WebSocket event types (8 total)
+- ✅ SWR hooks (useWorkflows, useWorkflowExecution, etc.)
+- ✅ Workspace/project scoping
+- ✅ Error handling patterns
+- ✅ Optimistic updates
+
+**Documentation & Testing:**
+- ✅ User guides (3 documents)
+- ✅ API reference documentation
+- ✅ Component library documentation
+- ✅ JSDoc comments on all types
+- ✅ 60+ automated tests
+- ✅ E2E test scenarios
 
 ---
 
