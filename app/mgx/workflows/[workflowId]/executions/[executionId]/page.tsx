@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   useWorkflowExecution,
   useExecutionMetrics,
@@ -33,7 +32,6 @@ export default function ExecutionDetailPage({
 }: {
   params: { workflowId: string; executionId: string };
 }) {
-  const router = useRouter();
   const { execution, isLoading: executionLoading, mutate } =
     useWorkflowExecution(params.executionId);
   const { metrics, isLoading: metricsLoading } = useExecutionMetrics(

@@ -114,7 +114,7 @@ test("triggers workflow execution and monitors timeline with live updates", asyn
   });
 
   // Mock execution detail endpoint - simulate progression
-  let executionState = { ...initialExecution, status: "running" };
+  const executionState = { ...initialExecution, status: "running" };
   await page.route("**/api/mgx/executions/exec-1**", async (route) => {
     // Simulate step progression
     if (executionState.steps[0].status === "pending") {

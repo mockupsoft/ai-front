@@ -29,7 +29,7 @@ export function ExecutionLogPanel({
     executionId && currentWorkspace
       ? [`/executions/${executionId}/logs${stepId ? `/${stepId}` : ""}`, apiOptions]
       : null,
-    ([path, opts]) =>
+    ([, opts]) =>
       fetchExecutionLogs(
         executionId as string,
         stepId,

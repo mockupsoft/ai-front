@@ -1,7 +1,6 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { useWorkflowExecutions, useWorkflowExecution } from "@/hooks/useWorkflowExecutions";
-import * as api from "@/lib/api";
 import useSWR from "swr";
 import * as workspaceContext from "@/lib/mgx/workspace/workspace-context";
 
