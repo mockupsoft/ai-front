@@ -9,7 +9,7 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("next/link", () => {
   const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
-    return <a href={href}>{children}</a>;
+    return <Link href={href}>{children}</Link>;
   };
   MockLink.displayName = "Link";
   return MockLink;
