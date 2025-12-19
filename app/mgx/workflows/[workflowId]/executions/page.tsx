@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { use } from "react";
 import { useWorkflowExecutions } from "@/hooks/useWorkflowExecutions";
 import { Button } from "@/components/mgx/ui/button";
 import { WorkflowExecutionList } from "@/components/mgx/workflow-execution-list";
@@ -11,12 +12,13 @@ import { toast } from "sonner";
 export default function WorkflowExecutionsPage({
   params,
 }: {
-  params: { workflowId: string };
+  params: Promise<{ workflowId: string }>;
 }) {
   const router = useRouter();
+  const { workflowId } = use(params);
   const { currentWorkspace, currentProject } = useWorkspace();
   const { executions, isLoading, mutate } = useWorkflowExecutions(
-    params.workflowId
+    workflowId
   );
 
   const handleTriggerExecution = async () => {
@@ -32,7 +34,7 @@ export default function WorkflowExecutionsPage({
       };
 
       const execution = await triggerWorkflowExecution(
-        params.workflowId,
+        workflowId,
         {},
         apiOptions
       );
@@ -42,7 +44,7 @@ export default function WorkflowExecutionsPage({
 
       // Navigate to the new execution
       router.push(
-        `/mgx/workflows/${params.workflowId}/executions/${execution.id}`
+        `/mgx/workflows/${workflowId}/executions/${execution.id}`
       );
     } catch (error) {
       const message =
@@ -71,7 +73,7 @@ export default function WorkflowExecutionsPage({
       </div>
 
       <WorkflowExecutionList
-        workflowId={params.workflowId}
+        workflowId={workflowId}
         executions={executions}
         isLoading={isLoading}
       />

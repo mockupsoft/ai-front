@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, use } from "react";
 import {
   useWorkflowExecution,
   useExecutionMetrics,
@@ -30,12 +30,13 @@ function getStatusVariant(status: string): StatusPillVariant {
 export default function ExecutionDetailPage({
   params,
 }: {
-  params: { workflowId: string; executionId: string };
+  params: Promise<{ workflowId: string; executionId: string }>;
 }) {
+  const { executionId } = use(params);
   const { execution, isLoading: executionLoading, mutate } =
-    useWorkflowExecution(params.executionId);
+    useWorkflowExecution(executionId);
   const { metrics, isLoading: metricsLoading } = useExecutionMetrics(
-    params.executionId
+    executionId
   );
   const [selectedStep, setSelectedStep] = useState<StepExecution | null>(null);
 
@@ -43,7 +44,7 @@ export default function ExecutionDetailPage({
 
   // Subscribe to execution updates
   const subscriptionPayload: WebSocketSubscription = {
-    executionId: params.executionId,
+    executionId: executionId,
   };
 
   if (typeof window !== "undefined") {
@@ -67,7 +68,7 @@ export default function ExecutionDetailPage({
             )}
           </div>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Execution ID: {params.executionId}
+            Execution ID: {executionId}
           </p>
         </div>
 
@@ -139,7 +140,7 @@ export default function ExecutionDetailPage({
               </div>
 
               <ExecutionLogPanel
-                executionId={params.executionId}
+                executionId={executionId}
                 stepId={selectedStep.stepId}
                 title={`Logs: ${selectedStep.stepName}`}
               />
@@ -154,7 +155,7 @@ export default function ExecutionDetailPage({
         </div>
       </div>
 
-      <ExecutionLogPanel executionId={params.executionId} title="All Logs" />
+      <ExecutionLogPanel executionId={executionId} title="All Logs" />
     </div>
   );
 }
