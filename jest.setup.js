@@ -19,3 +19,7 @@ global.fetch = jest.fn(() =>
     ok: true,
   })
 );
+
+// Mock env vars
+process.env.NEXT_PUBLIC_MGX_API_BASE_URL = "http://localhost:8000/api/mgx";
+

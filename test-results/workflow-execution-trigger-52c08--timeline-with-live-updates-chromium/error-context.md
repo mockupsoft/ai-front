@@ -1,0 +1,103 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - link "MGX MGX Dashboard" [ref=e6] [cursor=pointer]:
+        - /url: /mgx
+        - generic [ref=e8]: MGX
+        - generic [ref=e9]: MGX Dashboard
+      - navigation "MGX" [ref=e11]:
+        - link "Overview" [ref=e14] [cursor=pointer]:
+          - /url: /mgx
+          - img [ref=e15]
+          - generic [ref=e20]: Overview
+        - generic [ref=e21]:
+          - heading "Management" [level=3] [ref=e22]
+          - generic [ref=e23]:
+            - link "Tasks" [ref=e24] [cursor=pointer]:
+              - /url: /mgx/tasks
+              - img [ref=e25]
+              - generic [ref=e28]: Tasks
+            - link "Results" [ref=e29] [cursor=pointer]:
+              - /url: /mgx/results
+              - img [ref=e30]
+              - generic [ref=e36]: Results
+            - link "Workflows" [ref=e37] [cursor=pointer]:
+              - /url: /mgx/workflows
+              - img [ref=e38]
+              - generic [ref=e42]: Workflows
+            - link "Agents" [ref=e43] [cursor=pointer]:
+              - /url: /mgx/agents
+              - img [ref=e44]
+              - generic [ref=e47]: Agents
+        - generic [ref=e48]:
+          - heading "Monitoring" [level=3] [ref=e49]
+          - link "Monitoring" [ref=e51] [cursor=pointer]:
+            - /url: /mgx/monitoring
+            - img [ref=e52]
+            - generic [ref=e55]: Monitoring
+        - generic [ref=e56]:
+          - heading "System" [level=3] [ref=e57]
+          - link "Settings" [ref=e59] [cursor=pointer]:
+            - /url: /mgx/settings
+            - img [ref=e60]
+            - generic [ref=e63]: Settings
+    - generic [ref=e64]:
+      - banner [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - img
+              - textbox "Search" [ref=e69]:
+                - /placeholder: Search (placeholder)
+            - generic [ref=e70]:
+              - generic [ref=e71]:
+                - button "Workspace" [disabled]:
+                  - img
+                  - generic: Workspace
+                  - img
+              - generic [ref=e72]:
+                - button "No projects" [disabled]:
+                  - img
+                  - generic: No projects
+              - generic [ref=e73]: Failed to load workspaces
+          - generic [ref=e74]:
+            - generic [ref=e75]: DEV
+            - button "Notifications" [ref=e76]:
+              - img [ref=e77]
+            - generic [ref=e81]:
+              - paragraph [ref=e82]: Admin
+              - paragraph [ref=e83]: mgx@example.com
+      - navigation "Breadcrumb" [ref=e86]:
+        - link "Workspace" [ref=e87] [cursor=pointer]:
+          - /url: /mgx
+          - generic [ref=e88]: Workspace
+        - img [ref=e90]
+        - link "Home" [ref=e92] [cursor=pointer]:
+          - /url: /mgx
+        - img [ref=e93]
+        - generic [ref=e95]: Workflows
+      - main [ref=e96]:
+        - generic [ref=e97]:
+          - generic [ref=e98]:
+            - generic [ref=e99]:
+              - heading "Workflows" [level=1] [ref=e100]
+              - paragraph [ref=e101]: Manage workflow definitions and open the visual builder.
+            - button "New workflow" [ref=e102]
+          - generic [ref=e103]: No workflows found.
+  - region "Notifications alt+T"
+  - generic [ref=e108] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e109]:
+      - img [ref=e110]
+    - generic [ref=e113]:
+      - button "Open issues overlay" [ref=e114]:
+        - generic [ref=e115]:
+          - generic [ref=e116]: "0"
+          - generic [ref=e117]: "1"
+        - generic [ref=e118]: Issue
+      - button "Collapse issues badge" [ref=e119]:
+        - img [ref=e120]
+  - alert [ref=e122]
+```

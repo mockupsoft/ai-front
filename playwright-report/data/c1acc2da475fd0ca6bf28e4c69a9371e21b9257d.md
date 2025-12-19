@@ -1,0 +1,119 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - link "MGX MGX Dashboard" [ref=e6] [cursor=pointer]:
+        - /url: /mgx
+        - generic [ref=e8]: MGX
+        - generic [ref=e9]: MGX Dashboard
+      - navigation "MGX" [ref=e11]:
+        - link "Overview" [ref=e14] [cursor=pointer]:
+          - /url: /mgx
+          - img [ref=e15]
+          - generic [ref=e20]: Overview
+        - generic [ref=e21]:
+          - heading "Management" [level=3] [ref=e22]
+          - generic [ref=e23]:
+            - link "Tasks" [ref=e24] [cursor=pointer]:
+              - /url: /mgx/tasks
+              - img [ref=e25]
+              - generic [ref=e28]: Tasks
+            - link "Results" [ref=e29] [cursor=pointer]:
+              - /url: /mgx/results
+              - img [ref=e30]
+              - generic [ref=e36]: Results
+            - link "Workflows" [ref=e37] [cursor=pointer]:
+              - /url: /mgx/workflows
+              - img [ref=e38]
+              - generic [ref=e42]: Workflows
+            - link "Agents" [ref=e43] [cursor=pointer]:
+              - /url: /mgx/agents
+              - img [ref=e44]
+              - generic [ref=e47]: Agents
+        - generic [ref=e48]:
+          - heading "Monitoring" [level=3] [ref=e49]
+          - link "Monitoring" [ref=e51] [cursor=pointer]:
+            - /url: /mgx/monitoring
+            - img [ref=e52]
+            - generic [ref=e55]: Monitoring
+        - generic [ref=e56]:
+          - heading "System" [level=3] [ref=e57]
+          - link "Settings" [ref=e59] [cursor=pointer]:
+            - /url: /mgx/settings
+            - img [ref=e60]
+            - generic [ref=e63]: Settings
+    - generic [ref=e64]:
+      - banner [ref=e65]:
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - img
+              - textbox "Search" [ref=e69]:
+                - /placeholder: Search (placeholder)
+            - generic [ref=e70]:
+              - generic [ref=e71]:
+                - button "Workspace" [disabled]:
+                  - img
+                  - generic: Workspace
+                  - img
+              - generic [ref=e72]:
+                - button "No projects" [disabled]:
+                  - img
+                  - generic: No projects
+              - generic [ref=e73]: Failed to load workspaces
+          - generic [ref=e74]:
+            - generic [ref=e75]: DEV
+            - button "Notifications" [ref=e76]:
+              - img [ref=e77]
+            - generic [ref=e81]:
+              - paragraph [ref=e82]: Admin
+              - paragraph [ref=e83]: mgx@example.com
+      - navigation "Breadcrumb" [ref=e86]:
+        - link "Workspace" [ref=e87] [cursor=pointer]:
+          - /url: /mgx
+          - generic [ref=e88]: Workspace
+        - img [ref=e90]
+        - link "Home" [ref=e92] [cursor=pointer]:
+          - /url: /mgx
+        - img [ref=e93]
+        - link "Workflows" [ref=e95] [cursor=pointer]:
+          - /url: /mgx/workflows
+        - img [ref=e96]
+        - link "Wf 1" [ref=e98] [cursor=pointer]:
+          - /url: /mgx/workflows/wf-1
+        - img [ref=e99]
+        - link "Executions" [ref=e101] [cursor=pointer]:
+          - /url: /mgx/workflows/wf-1/executions
+        - img [ref=e102]
+        - generic [ref=e104]: Exec Retry
+      - main [ref=e105]:
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - heading "Execution Timeline" [level=1] [ref=e110]
+              - paragraph [ref=e111]: "Execution ID:"
+            - button "Refresh" [ref=e112]
+          - generic [ref=e113]:
+            - generic [ref=e115]: No execution data available.
+            - paragraph [ref=e118]: Select a step to view details and logs
+          - generic [ref=e119]:
+            - heading "All Logs" [level=3] [ref=e121]
+            - generic [ref=e123]: No logs available
+  - region "Notifications alt+T"
+  - generic [ref=e128] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e129]:
+      - img [ref=e130]
+    - generic [ref=e133]:
+      - button "Open issues overlay" [ref=e134]:
+        - generic [ref=e135]:
+          - generic [ref=e136]: "5"
+          - generic [ref=e137]: "6"
+        - generic [ref=e138]:
+          - text: Issue
+          - generic [ref=e139]: s
+      - button "Collapse issues badge" [ref=e140]:
+        - img [ref=e141]
+  - alert [ref=e143]
+```
