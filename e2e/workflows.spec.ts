@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 
 test.describe("Frontend Backend Data Flow", () => {
   const workspace1 = { id: "ws-1", name: "Workspace 1", userId: "user-1" };

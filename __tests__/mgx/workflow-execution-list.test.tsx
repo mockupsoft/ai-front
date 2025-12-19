@@ -6,7 +6,7 @@ import type { WorkflowExecution } from "@/lib/types/workflows";
 // Mock Next.js Link
 jest.mock("next/link", () => {
   const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
+    <Link href={href}>{children}</Link>
   );
   MockLink.displayName = "MockLink";
   return MockLink;
