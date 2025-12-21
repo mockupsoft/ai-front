@@ -182,7 +182,7 @@ const AccessibleNavigation = () => {
               aria-current="page"
             >
               Dashboard
-            </Link>
+            </a>
           </li>
           <li role="none">
             <a 
@@ -191,7 +191,7 @@ const AccessibleNavigation = () => {
               className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 px-3 py-2 rounded-md text-sm font-medium"
             >
               Tasks
-            </Link>
+            </a>
           </li>
           <li role="none">
             <a 
@@ -200,7 +200,7 @@ const AccessibleNavigation = () => {
               className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 px-3 py-2 rounded-md text-sm font-medium"
             >
               Workflows
-            </Link>
+            </a>
           </li>
         </ul>
       </div>
@@ -222,7 +222,7 @@ const AccessibleNavigation = () => {
                 aria-current="page"
               >
                 Dashboard
-              </Link>
+              </a>
             </li>
             <li role="none">
               <a 
@@ -231,7 +231,7 @@ const AccessibleNavigation = () => {
                 className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 block px-3 py-2 rounded-md text-base font-medium"
               >
                 Tasks
-              </Link>
+              </a>
             </li>
             <li role="none">
               <a 
@@ -240,7 +240,7 @@ const AccessibleNavigation = () => {
                 className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 block px-3 py-2 rounded-md text-base font-medium"
               >
                 Workflows
-              </Link>
+              </a>
             </li>
           </ul>
         </div>
@@ -330,9 +330,9 @@ describe('Accessibility Tests (a11y)', () => {
             <Button variant="primary" data-testid="keyboard-button">
               Keyboard Accessible Button
             </Button>
-            <Link href="#test" data-testid="keyboard-link" className="text-blue-600 hover:underline">
+            <a href="#test" data-testid="keyboard-link" className="text-blue-600 hover:underline">
               Keyboard Accessible Link
-            </Link>
+            </a>
             <input 
               type="text" 
               placeholder="Keyboard accessible input"
@@ -455,7 +455,7 @@ describe('Accessibility Tests (a11y)', () => {
               data-testid="skip-link"
             >
               Skip to main content
-            </Link>
+            </a>
             <AccessibleNavigation />
             <main id="main-content" tabIndex={-1} data-testid="main-content">
               <h1>Main Content</h1>
@@ -573,21 +573,21 @@ describe('Accessibility Tests (a11y)', () => {
               data-testid="create-workflow-link"
             >
               Create New Workflow
-            </Link>
+            </a>
             <a 
               href="/mgx/tasks/123" 
               className="text-blue-600 hover:underline"
               data-testid="view-task-link"
             >
               View Task #123
-            </Link>
+            </a>
             <a 
               href="/settings" 
               className="text-blue-600 hover:underline"
               data-testid="settings-link"
             >
               Account Settings
-            </Link>
+            </a>
           </div>
         </ThemeProvider>
       );
@@ -698,9 +698,9 @@ describe('Accessibility Tests (a11y)', () => {
             <h3>Navigation List</h3>
             <nav aria-label="Secondary navigation">
               <ul data-testid="nav-list">
-                <li><Link href="/profile">Profile</Link></li>
-                <li><Link href="/notifications">Notifications</Link></li>
-                <li><Link href="/billing">Billing</Link></li>
+                <li><a href="/profile">Profile</a></li>
+                <li><a href="/notifications">Notifications</a></li>
+                <li><a href="/billing">Billing</a></li>
               </ul>
             </nav>
           </div>
@@ -731,8 +731,8 @@ describe('Accessibility Tests (a11y)', () => {
             
             <nav role="navigation" aria-label="Main navigation" data-testid="main-nav">
               <ul>
-                <li><Link href="/">Dashboard</Link></li>
-                <li><Link href="/mgx/tasks">Tasks</Link></li>
+                <li><a href="/">Dashboard</a></li>
+                <li><a href="/mgx/tasks">Tasks</a></li>
               </ul>
             </nav>
             
@@ -744,8 +744,8 @@ describe('Accessibility Tests (a11y)', () => {
             <aside role="complementary" aria-label="Sidebar" data-testid="sidebar">
               <h3>Quick Actions</h3>
               <ul>
-                <li><Link href="/new">New Task</Link></li>
-                <li><Link href="/workflows">New Workflow</Link></li>
+                <li><a href="/new">New Task</a></li>
+                <li><a href="/workflows">New Workflow</a></li>
               </ul>
             </aside>
             
@@ -911,8 +911,8 @@ describe('Accessibility Tests (a11y)', () => {
               <h1>Page Title</h1>
               <nav>
                 <ul>
-                  <li><Link href="/">Home</Link></li>
-                  <li><Link href="/about">About</Link></li>
+                  <li><a href="/">Home</a></li>
+                  <li><a href="/about">About</a></li>
                 </ul>
               </nav>
             </header>
@@ -928,8 +928,8 @@ describe('Accessibility Tests (a11y)', () => {
               <section>
                 <h3>Related Links</h3>
                 <ul>
-                  <li><Link href="/link1">Link 1</Link></li>
-                  <li><Link href="/link2">Link 2</Link></li>
+                  <li><a href="/link1">Link 1</a></li>
+                  <li><a href="/link2">Link 2</a></li>
                 </ul>
               </section>
             </aside>
