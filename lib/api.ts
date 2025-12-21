@@ -9,6 +9,7 @@ import type {
   WorkflowExecution,
   ExecutionMetrics,
 } from "@/lib/types/workflows";
+import type { Workspace } from "@/lib/types/workspace";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_MGX_API_BASE_URL ??
@@ -514,4 +515,33 @@ export async function fetchExecutionMetrics(
   options?: ApiRequestOptions,
 ): Promise<ExecutionMetrics> {
   return fetcher<ExecutionMetrics>(`/executions/${executionId}/metrics`, options);
+}
+
+// Workspace management endpoints
+export async function fetchWorkspaceWorkspaces(
+  options?: ApiRequestOptions,
+): Promise<Workspace[]> {
+  return fetcher<Workspace[]>('/workspaces', options);
+}
+
+export async function createWorkspace(
+  name: string,
+  description?: string,
+  options?: ApiRequestOptions
+): Promise<Workspace> {
+  const url = options ? buildScopedUrl('/workspaces', options) : resolveUrl('/workspaces');
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ name, description }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.message || 'Failed to create workspace');
+  }
+
+  return res.json();
 }

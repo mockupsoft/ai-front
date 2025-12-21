@@ -1,7 +1,7 @@
 import { Bell, Search } from "lucide-react";
 
 import { Button } from "@/components/mgx/ui/button";
-import { WorkspaceSelector } from "@/lib/mgx/workspace/workspace-selector";
+import { WorkspaceSwitcher } from "@/components/mgx/workspace-switcher";
 
 function getEnvironmentInfo() {
   const env = process.env.NODE_ENV;
@@ -40,7 +40,7 @@ export function MgxHeader() {
               aria-label="Search"
             />
           </div>
-          <WorkspaceSelector />
+          <WorkspaceSwitcher />
         </div>
 
         <div className="flex items-center gap-3">
