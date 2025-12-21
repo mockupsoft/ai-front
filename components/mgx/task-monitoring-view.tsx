@@ -22,6 +22,7 @@ import { GitMetadataBadge } from "@/components/mgx/git-metadata-badge";
 import { AgentStatusList } from "@/components/mgx/agent-status-list";
 import { AgentActivityTimeline } from "@/components/mgx/agent-activity-timeline";
 import { TaskLiveChat } from "@/components/mgx/task-live-chat";
+import { MemoryInspector } from "@/components/mgx/memory-inspector";
 import { triggerRun } from "@/lib/api";
 import type { RunProgressPayload, TaskPhase, TaskStatus, GitMetadata, AgentActivityEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -43,13 +44,14 @@ function pillVariant(status: TaskStatus) {
   }
 }
 
-type TabId = "plan" | "chat" | "progress" | "results";
+type TabId = "plan" | "chat" | "progress" | "results" | "memory";
 
 const TAB_LABELS: Record<TabId, string> = {
   plan: "Plan",
   chat: "Live Chat",
   progress: "Progress",
   results: "Results",
+  memory: "Memory",
 };
 
 function safeString(value: unknown) {
@@ -350,6 +352,13 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
 
           {run && activeTab === "results" ? (
             <ResultsViewer artifacts={run.artifacts} taskId={taskId} runId={run.id} />
+          ) : null}
+
+          {run && activeTab === "memory" ? (
+            <MemoryInspector taskId={taskId} onMemoryUpdate={() => {
+              // Refresh other tabs if needed
+              mutateTask();
+            }} />
           ) : null}
         </CardContent>
       </Card>

@@ -226,3 +226,39 @@ export interface LlmConnectionTestResult {
   latency?: number;
   error?: string;
 }
+
+export interface MemoryItem {
+  id: string;
+  type: "message" | "fact" | "summary" | "context";
+  title: string;
+  content: string; // Summary or key points, not full text
+  source: "pinned" | "auto" | "manual";
+  timestamp: number;
+  size?: number; // Size in bytes for memory tracking
+  tags?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface Memory {
+  id: string;
+  type: "thread" | "workspace";
+  name: string;
+  items: MemoryItem[];
+  size: number; // Total size in bytes
+  maxSize: number; // Maximum allowed size in bytes
+  createdAt: number;
+  updatedAt: number;
+  taskId?: string; // For thread memory
+  workspaceId?: string; // For workspace memory
+}
+
+export interface TaskMemory {
+  taskId: string;
+  threadMemory: Memory;
+  workspaceMemory: Memory;
+  activeMemory: "thread" | "workspace" | "hybrid";
+  hybridSources: {
+    thread: boolean;
+    workspace: boolean;
+  };
+}

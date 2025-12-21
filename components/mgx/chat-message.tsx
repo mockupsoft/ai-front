@@ -1,6 +1,8 @@
 import * as React from "react";
-import { User, Bot, Terminal, AlertCircle, Info, CheckCircle2, ChevronRight, ChevronDown } from "lucide-react";
+import { User, Bot, Terminal, AlertCircle, Info, Pin, PinOff, ChevronRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { pinMessageToMemory } from "@/lib/api";
 
 export type MessageType = "user" | "agent" | "tool" | "system" | "error";
 
@@ -13,7 +15,10 @@ export interface ChatMessageProps {
   toolInput?: string;
   toolOutput?: string;
   isThinking?: boolean;
+  messageId?: string; // For pinning functionality
+  taskId?: string; // For pinning functionality
   className?: string;
+  onPinToMemory?: (messageId: string, content: string, title: string) => void;
 }
 
 export function ChatMessage({
@@ -25,9 +30,31 @@ export function ChatMessage({
   toolInput,
   toolOutput,
   isThinking,
+  messageId,
+  taskId,
   className,
+  onPinToMemory,
 }: ChatMessageProps) {
   const [isToolExpanded, setIsToolExpanded] = React.useState(false);
+  const [isPinned, setIsPinned] = React.useState(false);
+  const [isPinning, setIsPinning] = React.useState(false);
+
+  const handlePinToMemory = async () => {
+    if (!messageId || !taskId) return;
+
+    setIsPinning(true);
+    try {
+      const title = `${senderName || (isUser ? "You" : "Agent")}: ${content.substring(0, 50)}${content.length > 50 ? "..." : ""}`;
+      await pinMessageToMemory(taskId, messageId);
+      setIsPinned(true);
+      toast.success("Message pinned to memory");
+      onPinToMemory?.(messageId, content, title);
+    } catch {
+      toast.error("Failed to pin message");
+    } finally {
+      setIsPinning(false);
+    }
+  };
 
   const formatTime = (ts: number) => {
     return new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -126,11 +153,28 @@ export function ChatMessage({
       </div>
 
       <div className={cn("flex max-w-[80%] flex-col", isUser ? "items-end" : "items-start")}>
-        <div className="mb-1 flex items-center gap-2">
-          <span className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
-            {senderName || (isUser ? "You" : "Agent")}
-          </span>
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">{formatTime(timestamp)}</span>
+        <div className="mb-1 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-zinc-900 dark:text-zinc-100">
+              {senderName || (isUser ? "You" : "Agent")}
+            </span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">{formatTime(timestamp)}</span>
+          </div>
+          {messageId && taskId && (type === "user" || type === "agent") && (
+            <button
+              onClick={handlePinToMemory}
+              disabled={isPinning}
+              className={cn(
+                "opacity-0 group-hover:opacity-100 p-1 rounded transition-all",
+                isPinned 
+                  ? "text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
+                  : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+              )}
+              title={isPinned ? "Pinned to memory" : "Pin to memory"}
+            >
+              {isPinned ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
+            </button>
+          )}
         </div>
 
         <div

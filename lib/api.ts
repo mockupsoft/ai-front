@@ -4,7 +4,10 @@ import type {
   AgentInstance, 
   LlmProvider, 
   LlmModel,
-  LlmConnectionTestResult 
+  LlmConnectionTestResult,
+  MemoryItem,
+  Memory,
+  TaskMemory
 } from "@/lib/types";
 import type {
   Workflow,
@@ -581,5 +584,115 @@ export async function testLlmConnection(
     throw new Error(error.message || "Failed to test LLM connection");
   }
 
+  return res.json();
+}
+
+// Memory Management APIs
+export async function getTaskMemory(
+  taskId: string,
+  options?: ApiRequestOptions,
+): Promise<TaskMemory> {
+  return fetcher<TaskMemory>(`/tasks/${taskId}/memory`, options);
+}
+
+export async function pinMessageToMemory(
+  taskId: string,
+  messageId: string,
+  memoryType: "thread" | "workspace" = "thread",
+  options?: ApiRequestOptions,
+): Promise<MemoryItem> {
+  const url = options
+    ? buildScopedUrl(`/tasks/${taskId}/memory/pin`, options)
+    : resolveUrl(`/tasks/${taskId}/memory/pin`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ messageId, memoryType }),
+  });
+
+  if (!res.ok) throw new Error("Failed to pin message to memory");
+  return res.json();
+}
+
+export async function removeMemoryItem(
+  taskId: string,
+  memoryItemId: string,
+  memoryType: "thread" | "workspace",
+  options?: ApiRequestOptions,
+): Promise<void> {
+  const url = options
+    ? buildScopedUrl(`/tasks/${taskId}/memory/items/${memoryItemId}`, options)
+    : resolveUrl(`/tasks/${taskId}/memory/items/${memoryItemId}`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers,
+    body: JSON.stringify({ memoryType }),
+  });
+
+  if (!res.ok) throw new Error("Failed to remove memory item");
+}
+
+export async function clearMemory(
+  taskId: string,
+  memoryType: "thread" | "workspace" | "both" = "thread",
+  options?: ApiRequestOptions,
+): Promise<void> {
+  const url = options
+    ? buildScopedUrl(`/tasks/${taskId}/memory/clear`, options)
+    : resolveUrl(`/tasks/${taskId}/memory/clear`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ memoryType }),
+  });
+
+  if (!res.ok) throw new Error("Failed to clear memory");
+}
+
+export async function pruneMemoryItems(
+  taskId: string,
+  memoryType: "thread" | "workspace",
+  keepCount: number = 10,
+  options?: ApiRequestOptions,
+): Promise<Memory> {
+  const url = options
+    ? buildScopedUrl(`/tasks/${taskId}/memory/prune`, options)
+    : resolveUrl(`/tasks/${taskId}/memory/prune`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ memoryType, keepCount }),
+  });
+
+  if (!res.ok) throw new Error("Failed to prune memory items");
+  return res.json();
+}
+
+export async function addManualMemoryItem(
+  taskId: string,
+  memoryType: "thread" | "workspace",
+  item: Omit<MemoryItem, "id" | "timestamp">,
+  options?: ApiRequestOptions,
+): Promise<MemoryItem> {
+  const url = options
+    ? buildScopedUrl(`/tasks/${taskId}/memory/items`, options)
+    : resolveUrl(`/tasks/${taskId}/memory/items`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ memoryType, item }),
+  });
+
+  if (!res.ok) throw new Error("Failed to add memory item");
   return res.json();
 }
