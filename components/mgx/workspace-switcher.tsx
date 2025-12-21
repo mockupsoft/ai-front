@@ -139,7 +139,6 @@ export function WorkspaceSwitcher({
     error,
     searchTerm,
     retry,
-    refresh,
     setSearchTerm,
     switchWorkspace,
     createWorkspace,
