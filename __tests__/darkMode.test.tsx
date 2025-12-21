@@ -10,7 +10,6 @@ import { Button } from '@/components/mgx/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/mgx/ui/card';
 import Navigation from '@/components/Navigation';
 import Sidebar from '@/components/mgx/sidebar';
-import Link from 'next/link';
 
 // Mock next-themes for testing
 const mockUseTheme = jest.fn();
@@ -33,9 +32,9 @@ jest.mock('@/components/Navigation', () => {
                         Production
                       </span>
                     </div>
-                    <Link href="/" className="hover:underline">
+                    <a href="/" className="hover:underline">
                       Home
-                    </Link>
+                    </a>
       </nav>
     );
   };
@@ -47,8 +46,8 @@ jest.mock('@/components/mgx/sidebar', () => {
       <aside data-testid="sidebar" className="bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
         <nav className="p-4">
           <ul className="space-y-2">
-            <li><Link href="/" className="text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 block p-2 rounded">Home</Link></li>
-            <li><Link href="/mgx" className="text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 block p-2 rounded">Dashboard</Link></li>
+            <li><a href="/" className="text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 block p-2 rounded">Home</a></li>
+            <li><a href="/mgx" className="text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 block p-2 rounded">Dashboard</a></li>
           </ul>
         </nav>
       </aside>
@@ -125,9 +124,9 @@ describe('Dark Mode Tests', () => {
             <div className="bg-zinc-900 dark:bg-zinc-50 p-4 rounded" data-testid="primary-bg">
               <span className="text-white dark:text-zinc-900">Primary Background</span>
             </div>
-            <Link href="#" className="text-zinc-900 dark:text-zinc-50 hover:bg-zinc-900 dark:hover:bg-zinc-50 hover:text-white dark:hover:text-zinc-900">
+            <a href="#" className="text-zinc-900 dark:text-zinc-50 hover:bg-zinc-900 dark:hover:bg-zinc-50 hover:text-white dark:hover:text-zinc-900">
               Primary Link
-            </Link>
+            </a>
           </div>
         </ThemeProvider>
       );
@@ -200,7 +199,7 @@ describe('Dark Mode Tests', () => {
               data-testid="hover-link"
             >
               Hover Link
-            </Link>
+            </a>
           </div>
         </ThemeProvider>
       );
