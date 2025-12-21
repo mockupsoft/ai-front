@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { fetchWorkspaceWorkspaces } from "@/lib/api";
-import type { Workspace, Project, WorkspaceContextType, WorkspaceContextState } from "@/lib/types/workspace";
+import type { Workspace, Project, WorkspaceContextType, WorkspaceContextState, WorkspaceError, WorkspaceHealth } from "@/lib/types/workspace";
 
 // API URL resolution (local copy to avoid import cycle)
 const API_BASE =
@@ -30,24 +30,6 @@ const PROJECT_PARAM = "project";
 // Local storage keys
 const WORKSPACE_STORAGE_KEY = "mgx-selected-workspace";
 const PROJECT_STORAGE_KEY = "mgx-selected-project";
-
-// Enhanced error tracking
-interface WorkspaceError extends Error {
-  statusCode?: number;
-  isTimeout?: boolean;
-  isCorsError?: boolean;
-  isNetworkError?: boolean;
-  isAuthError?: boolean;
-}
-
-// Health status tracking
-interface WorkspaceHealth {
-  workspaceId: string;
-  status: 'healthy' | 'degraded' | 'offline';
-  lastChecked: Date;
-  apiLatency?: number;
-  wsStatus?: 'connected' | 'disconnected' | 'connecting';
-}
 
 // Default context state
 const defaultState: WorkspaceContextState = {
