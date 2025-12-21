@@ -1,5 +1,11 @@
 import { MGX_API_BASE_URL } from "@/lib/mgx/env";
-import type { AgentDefinition, AgentInstance } from "@/lib/types";
+import type { 
+  AgentDefinition, 
+  AgentInstance, 
+  LlmProvider, 
+  LlmModel,
+  LlmConnectionTestResult 
+} from "@/lib/types";
 import type {
   Workflow,
   WorkflowSummary,
@@ -541,6 +547,38 @@ export async function createWorkspace(
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
     throw new Error(error.message || 'Failed to create workspace');
+  }
+
+  return res.json();
+}
+
+// LLM Provider endpoints
+export async function fetchLlmModels(
+  provider: LlmProvider,
+  options?: ApiRequestOptions,
+): Promise<LlmModel[]> {
+  return fetcher<LlmModel[]>(`/llm/models/${provider}`, options);
+}
+
+export async function testLlmConnection(
+  provider: LlmProvider,
+  apiKey: string,
+  options?: ApiRequestOptions,
+): Promise<LlmConnectionTestResult> {
+  const url = options
+    ? buildScopedUrl("/llm/test-connection", options)
+    : resolveUrl("/llm/test-connection");
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ provider, apiKey }),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.message || "Failed to test LLM connection");
   }
 
   return res.json();

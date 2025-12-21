@@ -200,3 +200,29 @@ export interface AgentConfiguration {
   name?: string;
   settings?: Record<string, unknown>;
 }
+
+export type LlmProvider = "openai" | "gemini" | "deepseek" | "anthropic" | "cohere";
+
+export interface LlmModel {
+  id: string;
+  name: string;
+  description: string;
+  contextWindow: number;
+  inputCostPer1kTokens: number;
+  outputCostPer1kTokens: number;
+  speed: "fast" | "medium" | "slow";
+  capabilities: string[];
+}
+
+export interface LlmProviderConfig {
+  provider: LlmProvider;
+  model: string;
+  apiKey: string;
+}
+
+export interface LlmConnectionTestResult {
+  success: boolean;
+  message: string;
+  latency?: number;
+  error?: string;
+}
