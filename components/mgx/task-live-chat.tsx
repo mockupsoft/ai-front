@@ -24,6 +24,12 @@ export function TaskLiveChat({ taskId, runId, className }: TaskLiveChatProps) {
   const { lastMessage } = useWebSocket();
   const { currentWorkspace, currentProject } = useWorkspace();
 
+  const handlePinToMemory = React.useCallback((messageId: string, content: string, title: string) => {
+    // This will be handled by the MemoryInspector component via WebSocket or polling
+    // For now, we just refresh the task monitoring view when memory is updated
+    console.log("Message pinned to memory:", { messageId, content, title });
+  }, []);
+
   // Convert AgentMessage to ChatMessageProps
   const mapAgentMessageToChat = (msg: AgentMessage): ChatMessageProps => {
     let type: MessageType = "agent";
@@ -82,6 +88,7 @@ export function TaskLiveChat({ taskId, runId, className }: TaskLiveChatProps) {
       toolInput,
       toolOutput,
       isThinking: msg.actionType === "thinking" || msg.actionType === "executing",
+      messageId: msg.id,
     };
   };
 
@@ -178,6 +185,8 @@ export function TaskLiveChat({ taskId, runId, className }: TaskLiveChatProps) {
         messages={messages} 
         isTyping={isTyping} 
         typingAgentName={typingAgentName}
+        taskId={taskId}
+        onPinToMemory={handlePinToMemory}
         className="h-full"
       />
     </div>

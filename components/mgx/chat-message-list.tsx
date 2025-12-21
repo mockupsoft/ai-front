@@ -9,6 +9,8 @@ interface ChatMessageListProps {
   messages: ChatMessageProps[];
   isTyping?: boolean;
   typingAgentName?: string;
+  taskId?: string;
+  onPinToMemory?: (messageId: string, content: string, title: string) => void;
   className?: string;
 }
 
@@ -16,6 +18,8 @@ export function ChatMessageList({
   messages,
   isTyping,
   typingAgentName,
+  taskId,
+  onPinToMemory,
   className,
 }: ChatMessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -60,7 +64,12 @@ export function ChatMessageList({
         </div>
         
         {messages.map((message, index) => (
-          <ChatMessage key={index} {...message} />
+          <ChatMessage 
+            key={index} 
+            {...message} 
+            taskId={taskId}
+            onPinToMemory={onPinToMemory}
+          />
         ))}
 
         {isTyping && (
