@@ -21,7 +21,7 @@ import { TaskMonitor } from "@/components/mgx/task-monitor";
 import { GitMetadataBadge } from "@/components/mgx/git-metadata-badge";
 import { AgentStatusList } from "@/components/mgx/agent-status-list";
 import { AgentActivityTimeline } from "@/components/mgx/agent-activity-timeline";
-import { AgentChat } from "@/components/AgentChat";
+import { TaskLiveChat } from "@/components/mgx/task-live-chat";
 import { triggerRun } from "@/lib/api";
 import type { RunProgressPayload, TaskPhase, TaskStatus, GitMetadata, AgentActivityEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -43,10 +43,11 @@ function pillVariant(status: TaskStatus) {
   }
 }
 
-type TabId = "plan" | "progress" | "results";
+type TabId = "plan" | "chat" | "progress" | "results";
 
 const TAB_LABELS: Record<TabId, string> = {
   plan: "Plan",
+  chat: "Live Chat",
   progress: "Progress",
   results: "Results",
 };
@@ -274,28 +275,6 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
         </Card>
       )}
 
-      {task.currentRunId && (
-        <Card>
-          <CardHeader>
-            <div>
-              <CardTitle>Agent Communication</CardTitle>
-              <CardDescription>
-                Real-time agent activity and communication during task execution.
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="h-96">
-              <AgentChat
-                taskId={taskId}
-                runId={task.currentRunId}
-                isRunning={task.status === "running"}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       <Card>
         <CardHeader>
           <div>
@@ -345,6 +324,12 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
                 </Button>
               ) : null}
             </div>
+          ) : null}
+
+          {run && activeTab === "chat" ? (
+             <div className="h-[600px] rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
+               <TaskLiveChat taskId={taskId} runId={run.id} className="h-full" />
+             </div>
           ) : null}
 
           {run && activeTab === "progress" ? (
