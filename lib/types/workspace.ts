@@ -78,4 +78,5 @@ export interface WorkspaceContextState {
   isLoadingWorkspaces: boolean;
   isLoadingProjects: boolean;
   error: Error | null;
+  health: WorkspaceHealth | null;
 }

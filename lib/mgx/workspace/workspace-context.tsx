@@ -6,6 +6,23 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { fetchWorkspaceWorkspaces } from "@/lib/api";
 import type { Workspace, Project, WorkspaceContextType, WorkspaceContextState } from "@/lib/types/workspace";
 
+// API URL resolution (local copy to avoid import cycle)
+const API_BASE =
+  process.env.NEXT_PUBLIC_MGX_API_BASE_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:8000";
+
+function joinPath(basePath: string, path: string) {
+  const base = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${base}${p}`;
+}
+
+function resolveUrl(path: string) {
+  if (!API_BASE) return path;
+  return joinPath(API_BASE, path);
+}
+
 // URL parameter keys for persistence
 const WORKSPACE_PARAM = "workspace";
 const PROJECT_PARAM = "project";
@@ -185,7 +202,18 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     setState((prev) => ({ ...prev, isLoadingProjects: true, error: null }));
     
     try {
-      const projects = await fetcher<Project[]>(`/projects?workspace_id=${workspaceId}`);
+      const response = await fetch(resolveUrl(`/projects?workspace_id=${workspaceId}`), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.status}`);
+      }
+      
+      const projects = await response.json() as Project[];
       
       setState((prev) => ({
         ...prev,
@@ -337,7 +365,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       
       // Set current workspace if found
       if (workspaceId && workspaces.length > 0) {
-        const workspace = workspaces.find(w => w.id === workspaceId) || workspaces[0];
+        const workspace = workspaces.find((w: Workspace) => w.id === workspaceId) || workspaces[0];
         setState((prev) => ({ ...prev, currentWorkspace: workspace }));
         
         // Fetch projects for the workspace
@@ -395,6 +423,8 @@ export function useWorkspace(): WorkspaceContextType {
         selectProject: async () => {},
         refreshWorkspaces: async () => {},
         refreshProjects: async () => {},
+        refreshWorkspaceData: async () => {},
+        getWorkspaceHealth: () => null,
       };
     }
     throw new Error("useWorkspace must be used within a WorkspaceProvider");

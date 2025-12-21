@@ -179,7 +179,7 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
     if (health && wsConnected !== undefined) {
       health.wsStatus = wsConnected ? 'connected' : 'disconnected';
     }
-  }, [includeHealthCheck, health]);
+  }, [enableHealthCheck, health]);
 
   // Return offline fallback data if enabled and we have an error
   useEffect(() => {
