@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import useSWR from "swr";
 
 import { AgentStatusBadge } from "@/components/mgx/agent-status-badge";
+import { LlmProviderSelector } from "@/components/mgx/llm-provider-selector";
+import { ModelSelector } from "@/components/mgx/model-selector";
+import { ApiKeyInput } from "@/components/mgx/api-key-input";
 import {
   Card,
   CardHeader,
@@ -12,11 +15,13 @@ import {
   CardContent,
 } from "@/components/mgx/ui/card";
 import { Button } from "@/components/mgx/ui/button";
-import { fetchAgentContext, fetchAgentContextHistory } from "@/lib/api";
+import { fetchAgentContext, fetchAgentContextHistory, updateAgentConfig } from "@/lib/api";
 import type {
   AgentInstance,
   AgentContextSnapshot,
   AgentContextVersion,
+  LlmProvider,
+  LlmProviderConfig,
 } from "@/lib/types";
 import type { ApiRequestOptions } from "@/lib/api";
 
@@ -37,6 +42,14 @@ export const AgentDetailsPanel = React.forwardRef<
   );
   const [showHistory, setShowHistory] = useState(false);
   const [rollbackLoading, setRollbackLoading] = useState<number | null>(null);
+
+  // LLM Provider Configuration State
+  const [llmConfig, setLlmConfig] = useState<LlmProviderConfig>({
+    provider: (agent.context?.llmProvider as LlmProvider) || null,
+    model: (agent.context?.llmModel as string) || "",
+    apiKey: (agent.context?.llmApiKey as string) || "",
+  });
+  const [isEditingLlm, setIsEditingLlm] = useState(false);
 
   const { data: currentContext } = useSWR<AgentContextSnapshot | undefined>(
     agent.id ? ["/agents", agent.id, "context"] : null,
@@ -73,6 +86,45 @@ export const AgentDetailsPanel = React.forwardRef<
       }
     } finally {
       setRollbackLoading(null);
+    }
+  };
+
+  const handleLlmProviderChange = (provider: LlmProvider) => {
+    setLlmConfig(prev => ({
+      ...prev,
+      provider,
+      model: "", // Reset model when provider changes
+    }));
+  };
+
+  const handleLlmModelChange = (model: string) => {
+    setLlmConfig(prev => ({
+      ...prev,
+      model,
+    }));
+  };
+
+  const handleLlmApiKeyChange = (apiKey: string) => {
+    setLlmConfig(prev => ({
+      ...prev,
+      apiKey,
+    }));
+  };
+
+  const handleSaveLlmConfig = async () => {
+    const config = {
+      llmProvider: llmConfig.provider,
+      llmModel: llmConfig.model,
+      llmApiKey: llmConfig.apiKey,
+    };
+
+    try {
+      await updateAgentConfig(agent.id, config, apiOptions);
+      setIsEditingLlm(false);
+      // Update the local context as well
+      setEditConfig(prev => ({ ...prev, ...config }));
+    } catch (error) {
+      console.error("Failed to save LLM config:", error);
     }
   };
 
@@ -222,6 +274,117 @@ export const AgentDetailsPanel = React.forwardRef<
             <pre className="text-xs bg-zinc-50 dark:bg-zinc-900 p-3 rounded-md overflow-auto max-h-40 text-zinc-900 dark:text-zinc-50">
               {JSON.stringify(context, null, 2)}
             </pre>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle>LLM Provider Configuration</CardTitle>
+              <CardDescription>
+                Configure language model provider and settings for this agent
+              </CardDescription>
+            </div>
+            {!isEditingLlm && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setIsEditingLlm(true)}
+              >
+                Configure
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isEditingLlm ? (
+            <div className="space-y-4">
+              <LlmProviderSelector
+                selectedProvider={llmConfig.provider}
+                onProviderSelect={handleLlmProviderChange}
+                disabled={false}
+              />
+              
+              <ModelSelector
+                provider={llmConfig.provider}
+                selectedModel={llmConfig.model}
+                onModelSelect={handleLlmModelChange}
+                apiOptions={apiOptions}
+                disabled={!llmConfig.provider}
+              />
+              
+              <ApiKeyInput
+                provider={llmConfig.provider}
+                apiKey={llmConfig.apiKey}
+                onApiKeyChange={handleLlmApiKeyChange}
+                onSave={handleSaveLlmConfig}
+                apiOptions={apiOptions}
+                disabled={!llmConfig.provider || !llmConfig.model}
+              />
+
+              <div className="flex gap-2 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={handleSaveLlmConfig}
+                  disabled={!llmConfig.provider || !llmConfig.model || !llmConfig.apiKey}
+                >
+                  Save LLM Configuration
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setIsEditingLlm(false);
+                    // Reset to original values
+                    setLlmConfig({
+                      provider: (agent.context?.llmProvider as LlmProvider) || null,
+                      model: (agent.context?.llmModel as string) || "",
+                      apiKey: (agent.context?.llmApiKey as string) || "",
+                    });
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {llmConfig.provider ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      Provider
+                    </p>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-50">
+                      {llmConfig.provider}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      Model
+                    </p>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-50">
+                      {llmConfig.model || "Not configured"}
+                    </p>
+                  </div>
+                  <div className="col-span-2">
+                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      API Key
+                    </p>
+                    <p className="text-sm text-zinc-900 dark:text-zinc-50 font-mono">
+                      {llmConfig.apiKey ? "••••••••" : "Not configured"}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  No LLM provider configured. Click &quot;Configure&quot; to set up your language model provider.
+                </p>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
