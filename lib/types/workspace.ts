@@ -18,6 +18,22 @@ export interface Project {
   isActive?: boolean;
 }
 
+export interface WorkspaceHealth {
+  workspaceId: string;
+  status: 'healthy' | 'degraded' | 'offline';
+  lastChecked: Date;
+  apiLatency?: number;
+  wsStatus?: 'connected' | 'disconnected' | 'connecting';
+}
+
+export interface WorkspaceError extends Error {
+  statusCode?: number;
+  isTimeout?: boolean;
+  isCorsError?: boolean;
+  isNetworkError?: boolean;
+  isAuthError?: boolean;
+}
+
 export interface WorkspaceContextType {
   // Current selections
   currentWorkspace: Workspace | null;
@@ -38,9 +54,16 @@ export interface WorkspaceContextType {
   // Data fetching
   refreshWorkspaces: () => Promise<void>;
   refreshProjects: () => Promise<void>;
+  refreshWorkspaceData: () => Promise<void>;
+  
+  // Health monitoring
+  getWorkspaceHealth: (workspaceId?: string) => WorkspaceHealth | null;
   
   // Error state
   error: Error | null;
+  
+  // Health status
+  health: WorkspaceHealth | null;
 }
 
 export interface WorkspaceSelectionProps {
@@ -55,4 +78,5 @@ export interface WorkspaceContextState {
   isLoadingWorkspaces: boolean;
   isLoadingProjects: boolean;
   error: Error | null;
+  health: WorkspaceHealth | null;
 }

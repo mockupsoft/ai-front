@@ -3,12 +3,33 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { fetcher } from "@/lib/api";
-import type { Workspace, Project, WorkspaceContextType, WorkspaceContextState } from "@/lib/types/workspace";
+import { fetchWorkspaceWorkspaces } from "@/lib/api";
+import type { Workspace, Project, WorkspaceContextType, WorkspaceContextState, WorkspaceError, WorkspaceHealth } from "@/lib/types/workspace";
+
+// API URL resolution (local copy to avoid import cycle)
+const API_BASE =
+  process.env.NEXT_PUBLIC_MGX_API_BASE_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:8000";
+
+function joinPath(basePath: string, path: string) {
+  const base = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${base}${p}`;
+}
+
+function resolveUrl(path: string) {
+  if (!API_BASE) return path;
+  return joinPath(API_BASE, path);
+}
 
 // URL parameter keys for persistence
 const WORKSPACE_PARAM = "workspace";
 const PROJECT_PARAM = "project";
+
+// Local storage keys
+const WORKSPACE_STORAGE_KEY = "mgx-selected-workspace";
+const PROJECT_STORAGE_KEY = "mgx-selected-project";
 
 // Default context state
 const defaultState: WorkspaceContextState = {
@@ -19,14 +40,11 @@ const defaultState: WorkspaceContextState = {
   isLoadingWorkspaces: false,
   isLoadingProjects: false,
   error: null,
+  health: null,
 };
 
 // Create context
 export const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
-
-// Local storage keys
-const WORKSPACE_STORAGE_KEY = "mgx-selected-workspace";
-const PROJECT_STORAGE_KEY = "mgx-selected-project";
 
 interface WorkspaceProviderProps {
   children: React.ReactNode;
@@ -55,30 +73,106 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     };
   }, [searchParams]);
 
-  // Fetch workspaces
+  // Enhanced error classification
+  const classifyError = useCallback((error: unknown): WorkspaceError => {
+    const err = error as Error;
+    const enhancedError: WorkspaceError = new Error(err.message);
+    enhancedError.name = err.name;
+    enhancedError.stack = err.stack;
+
+    // Check for specific error types
+    if (err.message.includes('timeout') || err.message.includes('Timeout')) {
+      enhancedError.isTimeout = true;
+    }
+    if (err.message.includes('CORS')) {
+      enhancedError.isCorsError = true;
+    }
+    if (err.message.includes('network') || err.message.includes('Network')) {
+      enhancedError.isNetworkError = true;
+    }
+    if (err.message.includes('401') || err.message.includes('403') || err.message.includes('Unauthorized')) {
+      enhancedError.isAuthError = true;
+      enhancedError.statusCode = 401;
+    }
+    if (err.message.includes('404')) {
+      enhancedError.statusCode = 404;
+    }
+    if (err.message.includes('500')) {
+      enhancedError.statusCode = 500;
+    }
+
+    return enhancedError;
+  }, []);
+
+  // Fetch workspaces with enhanced error handling
   const fetchWorkspaces = useCallback(async () => {
     setState((prev) => ({ ...prev, isLoadingWorkspaces: true, error: null }));
     
     try {
-      const workspaces = await fetcher<Workspace[]>("/workspaces");
+      const startTime = Date.now();
+      const workspaces = await fetchWorkspaceWorkspaces();
+      const apiLatency = Date.now() - startTime;
+      
+      // Update health status on success
+      const health: WorkspaceHealth = {
+        workspaceId: 'global', // Global workspace health
+        status: apiLatency > 5000 ? 'degraded' : 'healthy', // Degraded if slow
+        lastChecked: new Date(),
+        apiLatency,
+      };
       
       setState((prev) => ({
         ...prev,
         workspaces,
+        health,
         isLoadingWorkspaces: false,
+        error: null,
       }));
+
+      // Save to localStorage for offline fallback
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('mgx-workspaces-cache', JSON.stringify({
+          workspaces,
+          timestamp: new Date().toISOString(),
+        }));
+      }
 
       return workspaces;
     } catch (err) {
-      console.error("Failed to fetch workspaces:", err);
+      console.error('Failed to fetch workspaces:', err);
+      const classifiedError = classifyError(err);
+      
       setState((prev) => ({
         ...prev,
-        error: err as Error,
+        error: classifiedError,
         isLoadingWorkspaces: false,
+        health: {
+          workspaceId: 'global',
+          status: 'offline',
+          lastChecked: new Date(),
+        },
       }));
+      
+      // Try offline fallback
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem('mgx-workspaces-cache');
+        if (cached) {
+          try {
+            const { workspaces } = JSON.parse(cached);
+            setState((prev) => ({
+              ...prev,
+              workspaces,
+              error: classifiedError, // Keep error but show cached data
+            }));
+            return workspaces;
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      }
       return [];
     }
-  }, []);
+  }, [classifyError]);
 
   // Fetch projects for a workspace
   const fetchProjects = useCallback(async (workspaceId: string) => {
@@ -90,7 +184,18 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     setState((prev) => ({ ...prev, isLoadingProjects: true, error: null }));
     
     try {
-      const projects = await fetcher<Project[]>(`/projects?workspace_id=${workspaceId}`);
+      const response = await fetch(resolveUrl(`/projects?workspace_id=${workspaceId}`), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.status}`);
+      }
+      
+      const projects = await response.json() as Project[];
       
       setState((prev) => ({
         ...prev,
@@ -125,6 +230,13 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     if (typeof window !== 'undefined') {
       localStorage.setItem(WORKSPACE_STORAGE_KEY, workspace.id);
       localStorage.removeItem(PROJECT_STORAGE_KEY);
+      
+      // Save to offline cache
+      localStorage.setItem('mgx-selected-workspace-cache', JSON.stringify({
+        id: workspace.id,
+        name: workspace.name,
+        timestamp: new Date().toISOString(),
+      }));
     }
 
     // Update state
@@ -195,6 +307,36 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     }
   }, [fetchProjects, state.currentWorkspace]);
 
+  // App-wide data refresh when workspace changes
+  const refreshWorkspaceData = useCallback(async () => {
+    // Reload all workspace-related data
+    if (state.currentWorkspace) {
+      await Promise.all([
+        fetchProjects(state.currentWorkspace.id),
+        refreshWorkspaces(),
+      ]);
+      
+      // Trigger custom event for other components to refresh
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('workspaceRefresh', {
+          detail: { workspaceId: state.currentWorkspace.id },
+        }));
+      }
+    }
+  }, [state.currentWorkspace, fetchProjects, refreshWorkspaces]);
+
+  // Get workspace health status
+  const getWorkspaceHealth = useCallback((workspaceId?: string): WorkspaceHealth | null => {
+    if (!workspaceId && !state.currentWorkspace) {
+      return state.health;
+    }
+    
+    const targetId = workspaceId || state.currentWorkspace?.id;
+    if (!targetId) return null;
+    
+    return state.health; // For now, return global health status
+  }, [state.health, state.currentWorkspace]);
+
   // Initialize context
   useEffect(() => {
     const initializeContext = async () => {
@@ -205,7 +347,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       
       // Set current workspace if found
       if (workspaceId && workspaces.length > 0) {
-        const workspace = workspaces.find(w => w.id === workspaceId) || workspaces[0];
+        const workspace = workspaces.find((w: Workspace) => w.id === workspaceId) || workspaces[0];
         setState((prev) => ({ ...prev, currentWorkspace: workspace }));
         
         // Fetch projects for the workspace
@@ -239,6 +381,8 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     selectProject,
     refreshWorkspaces,
     refreshProjects,
+    refreshWorkspaceData,
+    getWorkspaceHealth,
   };
 
   return (
@@ -261,6 +405,8 @@ export function useWorkspace(): WorkspaceContextType {
         selectProject: async () => {},
         refreshWorkspaces: async () => {},
         refreshProjects: async () => {},
+        refreshWorkspaceData: async () => {},
+        getWorkspaceHealth: () => null,
       };
     }
     throw new Error("useWorkspace must be used within a WorkspaceProvider");
