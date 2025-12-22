@@ -60,13 +60,48 @@ export const mockResults: MgxResult[] = [
   {
     id: "res_2001",
     taskId: "task_0999",
+    taskName: "Generate results bundle",
     createdAt: iso(120),
-    summary: "Bundle generated",
+    type: "report",
+    summary: "Bundle generated successfully with 5 artifacts",
+    content: "# Results Bundle Report\n\nGenerated 5 artifacts including code, test results, and review comments.",
+    artifacts: [
+      {
+        id: "art_001",
+        name: "generated_code.ts",
+        type: "code",
+        content: "export function example() {\n  return 'Hello World';\n}",
+        language: "typescript",
+      },
+      {
+        id: "art_002",
+        name: "test_results.json",
+        type: "json",
+        content: JSON.stringify({ passed: 45, failed: 2, skipped: 3 }, null, 2),
+      },
+      {
+        id: "art_003",
+        name: "review_summary.md",
+        type: "markdown",
+        content: "## Code Review Summary\n- Quality: Good\n- Coverage: 85%\n- Issues: 2 minor",
+      },
+    ],
   },
   {
     id: "res_2000",
     taskId: "task_0998",
+    taskName: "Regression run",
     createdAt: iso(290),
-    summary: "Regression failed (placeholder)",
+    type: "summary",
+    summary: "Regression test suite completed with failures",
+    content: "Regression tests identified 3 critical issues that need to be addressed.",
+    artifacts: [
+      {
+        id: "art_004",
+        name: "regression_test_output.json",
+        type: "test",
+        content: JSON.stringify({ total: 50, passed: 47, failed: 3, errors: [] }, null, 2),
+      },
+    ],
   },
 ];
