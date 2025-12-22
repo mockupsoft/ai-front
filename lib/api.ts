@@ -209,6 +209,359 @@ export async function refreshRepositoryMetadata(
   return res.json();
 }
 
+export async function listWebhookEvents(
+  repoFullName?: string,
+  eventType?: string,
+  limit: number = 50,
+  options?: ApiRequestOptions
+) {
+  const url = new URL(resolveUrl("/api/webhooks/github/events"));
+  if (repoFullName) url.searchParams.set("repo_full_name", repoFullName);
+  if (eventType) url.searchParams.set("event_type", eventType);
+  url.searchParams.set("limit", limit.toString());
+
+  const headers = buildHeaders(options);
+  const res = await fetch(url.toString(), { headers });
+
+  if (!res.ok) throw new Error("Failed to fetch webhook events");
+  return res.json();
+}
+
+export async function listPullRequests(
+  linkId: string,
+  state: "open" | "closed" | "all" = "open",
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/pull-requests?state=${state}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch pull requests");
+  return res.json();
+}
+
+export async function getPullRequest(
+  linkId: string,
+  prNumber: number,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/pull-requests/${prNumber}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch pull request");
+  return res.json();
+}
+
+export async function mergePullRequest(
+  linkId: string,
+  prNumber: number,
+  mergeMethod: "merge" | "squash" | "rebase" = "merge",
+  commitTitle?: string,
+  commitMessage?: string,
+  options?: ApiRequestOptions
+) {
+  const url = new URL(buildScopedUrl(`/api/repositories/${linkId}/pull-requests/${prNumber}/merge`, options));
+  url.searchParams.set("merge_method", mergeMethod);
+  if (commitTitle) url.searchParams.set("commit_title", commitTitle);
+  if (commitMessage) url.searchParams.set("commit_message", commitMessage);
+  
+  const headers = buildHeaders(options);
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers,
+  });
+  if (!res.ok) throw new Error("Failed to merge pull request");
+  return res.json();
+}
+
+export async function createPullRequestReview(
+  linkId: string,
+  prNumber: number,
+  state: "APPROVE" | "REQUEST_CHANGES" | "COMMENT",
+  body?: string,
+  event?: "APPROVE" | "REQUEST_CHANGES" | "COMMENT",
+  options?: ApiRequestOptions
+) {
+  const url = new URL(buildScopedUrl(`/api/repositories/${linkId}/pull-requests/${prNumber}/review`, options));
+  url.searchParams.set("state", state);
+  if (event) url.searchParams.set("event", event);
+  
+  const headers = buildHeaders(options);
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers,
+    body: body ? JSON.stringify({ body }) : undefined,
+  });
+  if (!res.ok) throw new Error("Failed to create review");
+  return res.json();
+}
+
+export async function createPullRequestComment(
+  linkId: string,
+  prNumber: number,
+  body: string,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/pull-requests/${prNumber}/comments`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ body }),
+  });
+  if (!res.ok) throw new Error("Failed to create comment");
+  return res.json();
+}
+
+export async function listPullRequestReviews(
+  linkId: string,
+  prNumber: number,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/pull-requests/${prNumber}/reviews`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch reviews");
+  return res.json();
+}
+
+export async function listPullRequestComments(
+  linkId: string,
+  prNumber: number,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/pull-requests/${prNumber}/comments`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch comments");
+  return res.json();
+}
+
+export async function listIssues(
+  linkId: string,
+  state: "open" | "closed" | "all" = "open",
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/issues?state=${state}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch issues");
+  return res.json();
+}
+
+export async function getIssue(
+  linkId: string,
+  issueNumber: number,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/issues/${issueNumber}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch issue");
+  return res.json();
+}
+
+export async function createIssue(
+  linkId: string,
+  title: string,
+  body?: string,
+  labels?: string[],
+  assignees?: string[],
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/issues`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ title, body, labels, assignees }),
+  });
+  if (!res.ok) throw new Error("Failed to create issue");
+  return res.json();
+}
+
+export async function updateIssue(
+  linkId: string,
+  issueNumber: number,
+  title?: string,
+  body?: string,
+  state?: "open" | "closed",
+  labels?: string[],
+  assignees?: string[],
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/issues/${issueNumber}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url.toString(), {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ title, body, state, labels, assignees }),
+  });
+  if (!res.ok) throw new Error("Failed to update issue");
+  return res.json();
+}
+
+export async function closeIssue(
+  linkId: string,
+  issueNumber: number,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/issues/${issueNumber}/close`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers,
+  });
+  if (!res.ok) throw new Error("Failed to close issue");
+  return res.json();
+}
+
+export async function createIssueComment(
+  linkId: string,
+  issueNumber: number,
+  body: string,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/issues/${issueNumber}/comments`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ body }),
+  });
+  if (!res.ok) throw new Error("Failed to create comment");
+  return res.json();
+}
+
+export async function listIssueComments(
+  linkId: string,
+  issueNumber: number,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/issues/${issueNumber}/comments`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch comments");
+  return res.json();
+}
+
+export async function getActivityFeed(
+  linkId: string,
+  limit: number = 50,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/activity?limit=${limit}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch activity feed");
+  return res.json();
+}
+
+export async function getCommitHistory(
+  linkId: string,
+  branch: string = "main",
+  limit: number = 50,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/commits?branch=${branch}&limit=${limit}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch commit history");
+  return res.json();
+}
+
+export async function getTimelineView(
+  linkId: string,
+  limit: number = 50,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/activity/timeline?limit=${limit}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch timeline");
+  return res.json();
+}
+
+export async function listBranches(
+  linkId: string,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/branches`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch branches");
+  return res.json();
+}
+
+export async function createBranch(
+  linkId: string,
+  branchName: string,
+  fromBranch: string = "main",
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/branches`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ branch_name: branchName, from_branch: fromBranch }),
+  });
+  if (!res.ok) throw new Error("Failed to create branch");
+  return res.json();
+}
+
+export async function deleteBranch(
+  linkId: string,
+  branchName: string,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/branches/${branchName}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url.toString(), {
+    method: "DELETE",
+    headers,
+  });
+  if (!res.ok) throw new Error("Failed to delete branch");
+  return res.json();
+}
+
+export async function compareBranches(
+  linkId: string,
+  base: string,
+  head: string,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/branches/compare?base=${base}&head=${head}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to compare branches");
+  return res.json();
+}
+
+export async function getCommitDiff(
+  linkId: string,
+  commitSha: string,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/diffs/${commitSha}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch commit diff");
+  return res.json();
+}
+
+export async function getCompareDiff(
+  linkId: string,
+  base: string,
+  head: string,
+  options?: ApiRequestOptions
+) {
+  const url = buildScopedUrl(`/api/repositories/${linkId}/diffs/compare?base=${base}&head=${head}`, options);
+  const headers = buildHeaders(options);
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error("Failed to fetch compare diff");
+  return res.json();
+}
+
 export async function fetchAgentInstances(
   options?: ApiRequestOptions,
 ): Promise<AgentInstance[]> {

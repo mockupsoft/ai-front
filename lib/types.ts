@@ -146,6 +146,142 @@ export type GitEvent = {
   data?: Record<string, unknown>;
 };
 
+export interface WebhookEvent {
+  id: string;
+  delivery_id: string;
+  event_type: string;
+  repository_id?: string;
+  repo_full_name?: string;
+  payload: Record<string, unknown>;
+  parsed_data?: Record<string, unknown>;
+  processed: boolean;
+  processed_at?: string;
+  error_message?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WebhookEventsResponse {
+  items: WebhookEvent[];
+  total: number;
+  limit: number;
+}
+
+export interface PullRequest {
+  number: number;
+  title: string;
+  body: string;
+  state: "open" | "closed";
+  head_branch: string;
+  base_branch: string;
+  head_sha: string;
+  base_sha: string;
+  html_url: string;
+  created_at: string;
+  updated_at: string;
+  merged_at?: string;
+  mergeable?: boolean;
+  mergeable_state?: string;
+  author?: string;
+  labels: string[];
+  review_count: number;
+  comment_count: number;
+}
+
+export interface PRReview {
+  id: number;
+  state: "APPROVED" | "CHANGES_REQUESTED" | "COMMENTED" | "DISMISSED";
+  body?: string;
+  author?: string;
+  submitted_at: string;
+}
+
+export interface PRComment {
+  id: number;
+  body: string;
+  author?: string;
+  created_at: string;
+  path?: string;
+  line?: number;
+}
+
+export interface Issue {
+  number: number;
+  title: string;
+  body: string;
+  state: "open" | "closed";
+  html_url: string;
+  created_at: string;
+  updated_at: string;
+  closed_at?: string;
+  author?: string;
+  labels: string[];
+  assignees: string[];
+  comment_count: number;
+}
+
+export interface IssueComment {
+  id: number;
+  body: string;
+  author?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface ActivityEvent {
+  id: string;
+  type: "commit" | "pull_request" | "issue" | "issue_comment" | "pr_review";
+  timestamp: string;
+  actor?: string;
+  title?: string;
+  body?: string;
+  url?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface Branch {
+  name: string;
+  sha: string;
+  protected: boolean;
+  default: boolean;
+}
+
+export interface BranchCompare {
+  ahead_by: number;
+  behind_by: number;
+  total_commits: number;
+  commits: Array<{
+    sha: string;
+    message: string;
+    author?: string;
+    date?: string;
+  }>;
+}
+
+export interface DiffFile {
+  filename: string;
+  status: "added" | "removed" | "modified" | "renamed";
+  additions: number;
+  deletions: number;
+  changes: number;
+  patch?: string;
+  previous_filename?: string;
+}
+
+export interface DiffStatistics {
+  files_changed: number;
+  additions: number;
+  deletions: number;
+  total_changes: number;
+}
+
+export interface DiffResponse {
+  base_sha: string;
+  head_sha: string;
+  files: DiffFile[];
+  statistics: DiffStatistics;
+}
+
 export type AgentStatus = "idle" | "active" | "executing" | "error" | "offline";
 
 export interface AgentDefinition {
