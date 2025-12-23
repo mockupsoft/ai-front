@@ -1,4 +1,10 @@
 // Utility functions
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export function formatTimeAgo(dateString: string): string {
   const date = new Date(dateString);

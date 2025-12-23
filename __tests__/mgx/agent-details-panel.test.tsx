@@ -178,7 +178,9 @@ describe("AgentDetailsPanel", () => {
       />
     );
 
-    expect(screen.getByText(/Configuration/)).toBeInTheDocument();
+    // Use getAllByText since "Configuration" appears in multiple places (Configuration and LLM Provider Configuration)
+    const configElements = screen.getAllByText(/Configuration/);
+    expect(configElements.length).toBeGreaterThan(0);
   });
 
   it("renders context history section", () => {

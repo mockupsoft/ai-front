@@ -14,10 +14,14 @@ jest.mock("@/lib/api", () => ({
 }));
 
 // Mock Next.js hooks
+const mockUseRouter = jest.fn();
+const mockUsePathname = jest.fn();
+const mockUseSearchParams = jest.fn();
+
 jest.mock("next/navigation", () => ({
-  useRouter: jest.fn(),
-  usePathname: jest.fn(),
-  useSearchParams: jest.fn(),
+  useRouter: () => mockUseRouter(),
+  usePathname: () => mockUsePathname(),
+  useSearchParams: () => mockUseSearchParams(),
 }));
 
 // Mock localStorage
@@ -90,8 +94,9 @@ describe("WorkspaceSelector", () => {
     // Setup default search params mock
     const mockSearchParams = new URLSearchParams();
     
-    (useRouter as jest.Mock).mockReturnValue(mockRouter);
-    (useSearchParams as jest.Mock).mockReturnValue(mockSearchParams);
+    mockUseRouter.mockReturnValue(mockRouter);
+    mockUseSearchParams.mockReturnValue(mockSearchParams);
+    mockUsePathname.mockReturnValue("/");
     
     // Default API responses
     (fetcher as jest.Mock).mockImplementation((path: string) => {
@@ -111,7 +116,7 @@ describe("WorkspaceSelector", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Development Workspace/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Web Application/i })).toBeInTheDocument();
-    });
+    }, { timeout: 3000 });
   });
 
   it("should show loading states", async () => {

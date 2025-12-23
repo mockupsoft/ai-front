@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 
 import MgxLayout from "@/app/mgx/layout";
+import { WorkspaceProvider } from "@/lib/mgx/workspace/workspace-context";
 import { fetcher } from "@/lib/api";
 
 jest.mock("next/navigation", () => ({
@@ -39,36 +40,44 @@ describe("MgxLayout", () => {
 
   it("renders children", () => {
     render(
-      <MgxLayout>
-        <div>Test Content</div>
-      </MgxLayout>,
+      <WorkspaceProvider>
+        <MgxLayout>
+          <div>Test Content</div>
+        </MgxLayout>
+      </WorkspaceProvider>,
     );
     expect(screen.getByText("Test Content")).toBeInTheDocument();
   });
 
   it("renders header", () => {
     render(
-      <MgxLayout>
-        <div>Test Content</div>
-      </MgxLayout>,
+      <WorkspaceProvider>
+        <MgxLayout>
+          <div>Test Content</div>
+        </MgxLayout>
+      </WorkspaceProvider>,
     );
     expect(screen.getByText("Admin")).toBeInTheDocument();
   });
 
   it("renders sidebar with app name", () => {
     render(
-      <MgxLayout>
-        <div>Test Content</div>
-      </MgxLayout>,
+      <WorkspaceProvider>
+        <MgxLayout>
+          <div>Test Content</div>
+        </MgxLayout>
+      </WorkspaceProvider>,
     );
     expect(screen.getByText("MGX Dashboard")).toBeInTheDocument();
   });
 
   it("renders navigation items", () => {
     render(
-      <MgxLayout>
-        <div>Test Content</div>
-      </MgxLayout>,
+      <WorkspaceProvider>
+        <MgxLayout>
+          <div>Test Content</div>
+        </MgxLayout>
+      </WorkspaceProvider>,
     );
     expect(screen.getAllByText("Overview").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Tasks").length).toBeGreaterThan(0);

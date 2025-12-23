@@ -104,6 +104,7 @@ export interface AgentMessage {
   content: string;
   timestamp: number;
   actionType?: "thinking" | "executing" | "completed" | "error";
+  payload?: Record<string, any>; // Backend payload desteği
 }
 
 export interface TaskRun {

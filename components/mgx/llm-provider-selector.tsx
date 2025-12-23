@@ -2,7 +2,12 @@
 
 import React from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/mgx/ui/card";
+import { ModelSelector } from "./model-selector";
+import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import type { LlmProvider } from "@/lib/types";
+import type { ApiRequestOptions } from "@/lib/api";
+import useSWR from "swr";
+import { fetchLlmModels } from "@/lib/api";
 
 interface LlmProviderInfo {
   provider: LlmProvider;
@@ -52,15 +57,42 @@ const LLM_PROVIDERS: LlmProviderInfo[] = [
 
 interface LlmProviderSelectorProps {
   selectedProvider: LlmProvider | null;
+  selectedModel: string | null;
   onProviderSelect: (provider: LlmProvider) => void;
+  onModelSelect: (modelId: string) => void;
   disabled?: boolean;
+  apiOptions?: ApiRequestOptions;
 }
 
 export function LlmProviderSelector({
   selectedProvider,
+  selectedModel,
   onProviderSelect,
+  onModelSelect,
   disabled = false,
+  apiOptions,
 }: LlmProviderSelectorProps) {
+  // Check provider availability by trying to fetch models
+  const { data: models, error: availabilityError, isLoading: isCheckingAvailability } = useSWR(
+    selectedProvider ? ["llm-provider-availability", selectedProvider] : null,
+    selectedProvider
+      ? async () => {
+          try {
+            await fetchLlmModels(selectedProvider, apiOptions);
+            return { available: true };
+          } catch {
+            return { available: false };
+          }
+        }
+      : null,
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60000, // Cache for 1 minute
+    }
+  );
+
+  const isAvailable = models?.available ?? true; // Default to true if not checked yet
+
   return (
     <Card>
       <CardHeader>
@@ -107,12 +139,28 @@ export function LlmProviderSelector({
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                      {providerInfo.name}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                        {providerInfo.name}
+                      </h3>
+                      {isSelected && isCheckingAvailability && (
+                        <Loader2 className="h-3 w-3 animate-spin text-zinc-400" />
+                      )}
+                      {isSelected && !isCheckingAvailability && isAvailable && (
+                        <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" title="Available" />
+                      )}
+                      {isSelected && !isCheckingAvailability && !isAvailable && (
+                        <AlertCircle className="h-3 w-3 text-red-600 dark:text-red-400" title="Not available" />
+                      )}
+                    </div>
                     <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
                       {providerInfo.description}
                     </p>
+                    {isSelected && !isAvailable && !isCheckingAvailability && (
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        Provider is not available. Please check your configuration.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -120,6 +168,19 @@ export function LlmProviderSelector({
           })}
         </div>
       </CardContent>
+      
+      {/* Model Selector */}
+      {selectedProvider && (
+        <div className="mt-4 border-t pt-4">
+          <ModelSelector
+            provider={selectedProvider}
+            selectedModel={selectedModel}
+            onModelSelect={onModelSelect}
+            apiOptions={apiOptions}
+            disabled={disabled}
+          />
+        </div>
+      )}
     </Card>
   );
 }

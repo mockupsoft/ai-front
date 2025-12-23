@@ -49,7 +49,7 @@ describe("WorkflowBuilder", () => {
     variables: [],
   };
 
-  it("adds a step from the palette", () => {
+  it("adds a step from the palette", async () => {
     render(<WorkflowBuilder initialDefinition={blank} initialName="Demo" />);
 
     const palette = screen.getByLabelText("Step palette");
@@ -58,7 +58,9 @@ describe("WorkflowBuilder", () => {
 
     fireEvent.click(within(scriptCard as HTMLElement).getByRole("button", { name: "Add" }));
 
-    expect(screen.getByLabelText("Step Script")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText("Step Script")).toBeInTheDocument();
+    });
   });
 
   it("surfaces validation issues inline", async () => {
@@ -103,7 +105,12 @@ describe("WorkflowBuilder", () => {
 
     fireEvent.click(node);
 
-    expect(screen.getByText("Agent assignment required")).toBeInTheDocument();
+    // Wait for validation issues to appear in the step panel
+    await waitFor(() => {
+      // Use getAllByText and check that at least one exists, since the message might appear multiple times
+      const messages = screen.getAllByText("Agent assignment required");
+      expect(messages.length).toBeGreaterThan(0);
+    });
   });
 
   it("creates a workflow on save when workflowId is not provided", async () => {

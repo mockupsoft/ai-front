@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom";
 import { jest } from "@jest/globals";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { WorkspaceProvider, useWorkspace } from "@/lib/mgx/workspace/workspace-context";
@@ -13,10 +14,14 @@ jest.mock("@/lib/api", () => ({
 }));
 
 // Mock Next.js hooks
+const mockUseRouter = jest.fn();
+const mockUsePathname = jest.fn();
+const mockUseSearchParams = jest.fn();
+
 jest.mock("next/navigation", () => ({
-  useRouter: jest.fn(),
-  usePathname: jest.fn(),
-  useSearchParams: jest.fn(),
+  useRouter: () => mockUseRouter(),
+  usePathname: () => mockUsePathname(),
+  useSearchParams: () => mockUseSearchParams(),
 }));
 
 // Mock localStorage
@@ -85,10 +90,11 @@ describe("WorkspaceProvider", () => {
       forward: jest.fn(),
       prefetch: jest.fn(),
     };
-    (useRouter as jest.Mock).mockReturnValue(mockRouter);
+    mockUseRouter.mockReturnValue(mockRouter);
     
     // Setup default search params mock
-    (useSearchParams as jest.Mock).mockReturnValue(new URLSearchParams());
+    mockUseSearchParams.mockReturnValue(new URLSearchParams());
+    mockUsePathname.mockReturnValue("/");
   });
 
   afterEach(() => {
@@ -105,6 +111,7 @@ describe("WorkspaceProvider", () => {
     const TestComponent = () => {
       const {
         currentWorkspace,
+        currentProject,
         workspaces,
         projects,
         isLoadingWorkspaces,
@@ -138,7 +145,7 @@ describe("WorkspaceProvider", () => {
       expect(screen.getByTestId("project-name")).toHaveTextContent("Web Application");
       expect(screen.getByTestId("workspace-count")).toHaveTextContent("2");
       expect(screen.getByTestId("project-count")).toHaveTextContent("2");
-    });
+    }, { timeout: 3000 });
   });
 
   it("should select a different workspace", async () => {

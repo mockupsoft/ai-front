@@ -12,7 +12,11 @@ import {
   Users,
   Info,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Search,
+  X,
+  BarChart3,
+  TrendingUp
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,6 +35,7 @@ import {
   pruneMemoryItems, 
   removeMemoryItem,
   addManualMemoryItem,
+  updateMemoryItem,
   getTaskMemory
 } from "@/lib/api";
 import type { Memory, MemoryItem, TaskMemory } from "@/lib/types";
@@ -180,6 +185,7 @@ export function MemoryInspector({ taskId, className, onMemoryUpdate }: MemoryIns
   const [activeTab, setActiveTab] = React.useState<TabId>("thread");
   const [showAddForm, setShowAddForm] = React.useState(false);
   const [clearConfirm, setClearConfirm] = React.useState<MemoryType | null>(null);
+  const [searchTerm, setSearchTerm] = React.useState("");
 
   const { data: taskMemory, isLoading, error, mutate } = useSWR<TaskMemory>(
     taskId ? `task-memory-${taskId}` : null,
@@ -236,6 +242,17 @@ export function MemoryInspector({ taskId, className, onMemoryUpdate }: MemoryIns
     }
   };
 
+  const handleEditItem = async (itemId: string, updates: Partial<Omit<MemoryItem, "id" | "timestamp">>) => {
+    try {
+      await updateMemoryItem(taskId, itemId, activeTab, updates);
+      mutate(); // Revalidate data
+      onMemoryUpdate?.();
+      toast.success("Memory item updated");
+    } catch {
+      toast.error("Failed to update memory item");
+    }
+  };
+
   const handleRefresh = () => {
     mutate();
   };
@@ -270,6 +287,49 @@ export function MemoryInspector({ taskId, className, onMemoryUpdate }: MemoryIns
 
   const currentMemory = taskMemory?.[activeTab === "thread" ? "threadMemory" : "workspaceMemory"];
   const otherMemory = taskMemory?.[activeTab === "thread" ? "workspaceMemory" : "threadMemory"];
+
+  // Filter items based on search term
+  const filteredItems = React.useMemo(() => {
+    if (!currentMemory || !searchTerm.trim()) return currentMemory.items;
+    
+    const term = searchTerm.toLowerCase();
+    return currentMemory.items.filter(item => 
+      item.title.toLowerCase().includes(term) ||
+      item.content.toLowerCase().includes(term) ||
+      (item.tags && item.tags.some(tag => tag.toLowerCase().includes(term)))
+    );
+  }, [currentMemory?.items, searchTerm]);
+
+  // Calculate analytics
+  const analytics = React.useMemo(() => {
+    if (!currentMemory) return null;
+
+    const typeDistribution: Record<string, number> = {};
+    const sourceDistribution: Record<string, number> = {};
+    const tagCounts: Record<string, number> = {};
+
+    currentMemory.items.forEach(item => {
+      typeDistribution[item.type] = (typeDistribution[item.type] || 0) + 1;
+      sourceDistribution[item.source] = (sourceDistribution[item.source] || 0) + 1;
+      if (item.tags) {
+        item.tags.forEach(tag => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+        });
+      }
+    });
+
+    const mostUsedTags = Object.entries(tagCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([tag, count]) => ({ tag, count }));
+
+    return {
+      typeDistribution,
+      sourceDistribution,
+      mostUsedTags,
+      totalItems: currentMemory.items.length,
+    };
+  }, [currentMemory]);
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -323,11 +383,36 @@ export function MemoryInspector({ taskId, className, onMemoryUpdate }: MemoryIns
 
           {currentMemory && (
             <div className="space-y-4">
+              {/* Search Input */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                <input
+                  type="text"
+                  placeholder="Search memory items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full rounded-md border border-zinc-300 bg-white px-10 py-2 text-sm placeholder:text-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-medium">{MEMORY_TYPE_INFO[activeTab].title}</h3>
                   <p className="text-xs text-zinc-600 dark:text-zinc-400">
                     {MEMORY_TYPE_INFO[activeTab].description}
+                    {searchTerm && (
+                      <span className="ml-1">
+                        ({filteredItems.length} of {currentMemory.items.length} items)
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -361,6 +446,61 @@ export function MemoryInspector({ taskId, className, onMemoryUpdate }: MemoryIns
 
               {currentMemory.size > 0 && <MemoryUsageBar memory={currentMemory} />}
 
+              {/* Analytics Section */}
+              {analytics && analytics.totalItems > 0 && (
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BarChart3 className="h-4 w-4 text-zinc-600 dark:text-zinc-400" />
+                    <h4 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Analytics</h4>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <p className="font-medium text-zinc-700 dark:text-zinc-300 mb-2">Type Distribution</p>
+                      <div className="space-y-1">
+                        {Object.entries(analytics.typeDistribution).map(([type, count]) => (
+                          <div key={type} className="flex items-center justify-between">
+                            <span className="text-zinc-600 dark:text-zinc-400 capitalize">{type}</span>
+                            <span className="font-medium text-zinc-900 dark:text-zinc-100">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <p className="font-medium text-zinc-700 dark:text-zinc-300 mb-2">Source Distribution</p>
+                      <div className="space-y-1">
+                        {Object.entries(analytics.sourceDistribution).map(([source, count]) => (
+                          <div key={source} className="flex items-center justify-between">
+                            <span className="text-zinc-600 dark:text-zinc-400 capitalize">{source}</span>
+                            <span className="font-medium text-zinc-900 dark:text-zinc-100">{count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {analytics.mostUsedTags.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="h-3 w-3 text-zinc-600 dark:text-zinc-400" />
+                        <p className="font-medium text-zinc-700 dark:text-zinc-300 text-xs">Most Used Tags</p>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {analytics.mostUsedTags.map(({ tag, count }) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center gap-1 rounded-full bg-zinc-200 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                          >
+                            {tag} ({count})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {showAddForm && (
                 <AddMemoryItemForm 
                   onAdd={handleAddItem}
@@ -369,20 +509,28 @@ export function MemoryInspector({ taskId, className, onMemoryUpdate }: MemoryIns
               )}
 
               <div className="space-y-2">
-                {currentMemory.items.length === 0 ? (
+                {filteredItems.length === 0 ? (
                   <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
                     <Archive className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No items in {MEMORY_TYPE_INFO[activeTab].title.toLowerCase()}</p>
-                    <p className="text-xs mt-1">
-                      Pin messages from chat or add manual items to get started
+                    <p className="text-sm">
+                      {searchTerm 
+                        ? `No items found matching "${searchTerm}"`
+                        : `No items in ${MEMORY_TYPE_INFO[activeTab].title.toLowerCase()}`
+                      }
                     </p>
+                    {!searchTerm && (
+                      <p className="text-xs mt-1">
+                        Pin messages from chat or add manual items to get started
+                      </p>
+                    )}
                   </div>
                 ) : (
-                  currentMemory.items.map((item) => (
+                  filteredItems.map((item) => (
                     <MemoryItemComponent
                       key={item.id}
                       item={item}
                       onRemove={handleRemoveItem}
+                      onEdit={handleEditItem}
                     />
                   ))
                 )}
