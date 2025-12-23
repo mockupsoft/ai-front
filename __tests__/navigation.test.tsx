@@ -6,7 +6,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
 import { ThemeProvider } from 'next-themes';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
@@ -144,11 +143,9 @@ jest.mock('@/components/mgx/breadcrumb', () => ({
 }));
 
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
-  <BrowserRouter>
-    <ThemeProvider>
-      {children}
-    </ThemeProvider>
-  </BrowserRouter>
+  <ThemeProvider>
+    {children}
+  </ThemeProvider>
 );
 
 describe('Navigation & Routing Tests', () => {

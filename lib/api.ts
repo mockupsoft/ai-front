@@ -1049,3 +1049,97 @@ export async function addManualMemoryItem(
   if (!res.ok) throw new Error("Failed to add memory item");
   return res.json();
 }
+
+export async function updateMemoryItem(
+  taskId: string,
+  itemId: string,
+  memoryType: "thread" | "workspace",
+  updates: Partial<Omit<MemoryItem, "id" | "timestamp">>,
+  options?: ApiRequestOptions,
+): Promise<MemoryItem> {
+  const url = options
+    ? buildScopedUrl(`/tasks/${taskId}/memory/items/${itemId}`, options)
+    : resolveUrl(`/tasks/${taskId}/memory/items/${itemId}`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ memoryType, ...updates }),
+  });
+
+  if (!res.ok) throw new Error("Failed to update memory item");
+  return res.json();
+}
+
+// Result Management APIs
+export async function exportResult(
+  resultId: string,
+  format: "pdf" | "json" | "markdown",
+  options?: ApiRequestOptions,
+): Promise<Blob> {
+  const url = options
+    ? buildScopedUrl(`/results/${resultId}/export`, options)
+    : resolveUrl(`/results/${resultId}/export`);
+  const urlObj = new URL(url);
+  urlObj.searchParams.set("format", format);
+  
+  const headers = buildHeaders(options);
+  const res = await fetch(urlObj.toString(), { headers });
+
+  if (!res.ok) throw new Error("Failed to export result");
+  return res.blob();
+}
+
+export async function duplicateResult(
+  resultId: string,
+  options?: ApiRequestOptions,
+): Promise<any> {
+  const url = options
+    ? buildScopedUrl(`/results/${resultId}/duplicate`, options)
+    : resolveUrl(`/results/${resultId}/duplicate`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+  });
+
+  if (!res.ok) throw new Error("Failed to duplicate result");
+  return res.json();
+}
+
+export async function deleteResult(
+  resultId: string,
+  options?: ApiRequestOptions,
+): Promise<void> {
+  const url = options
+    ? buildScopedUrl(`/results/${resultId}`, options)
+    : resolveUrl(`/results/${resultId}`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers,
+  });
+
+  if (!res.ok) throw new Error("Failed to delete result");
+}
+
+export async function archiveResult(
+  resultId: string,
+  options?: ApiRequestOptions,
+): Promise<any> {
+  const url = options
+    ? buildScopedUrl(`/results/${resultId}/archive`, options)
+    : resolveUrl(`/results/${resultId}/archive`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers,
+  });
+
+  if (!res.ok) throw new Error("Failed to archive result");
+  return res.json();
+}

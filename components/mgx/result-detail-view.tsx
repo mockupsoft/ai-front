@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowLeft, AlertCircle, Calendar, Type, Target } from "lucide-react";
+import { ArrowLeft, AlertCircle, Calendar, Type, Target, Download, MoreVertical, Copy, Trash2, Archive } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/mgx/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/mgx/ui/card";
@@ -10,6 +11,8 @@ import { StatusPill } from "@/components/mgx/ui/status-pill";
 import { ResultArtifactViewer } from "@/components/mgx/result-artifact-viewer";
 import { useResult } from "@/lib/mgx/hooks/useResults";
 import { useTasks } from "@/lib/mgx/hooks/useTasks";
+import { exportResult, duplicateResult, deleteResult, archiveResult } from "@/lib/api";
+import { useWorkspace } from "@/lib/mgx/workspace/workspace-context";
 
 export type ResultDetailViewProps = {
   resultId: string;
@@ -17,10 +20,84 @@ export type ResultDetailViewProps = {
 };
 
 export function ResultDetailView({ resultId, onBack }: ResultDetailViewProps) {
-  const { data: result, error, isLoading } = useResult(resultId);
+  const { data: result, error, isLoading, mutate } = useResult(resultId);
   const { data: tasks = [] } = useTasks();
+  const { currentWorkspace, currentProject } = useWorkspace();
+  const [isExporting, setIsExporting] = React.useState(false);
+  const [showExportMenu, setShowExportMenu] = React.useState(false);
+  const [showActionsMenu, setShowActionsMenu] = React.useState(false);
+  const [deleteConfirm, setDeleteConfirm] = React.useState(false);
 
   const relatedTask = result?.taskId ? tasks.find((t) => t.id === result.taskId) : null;
+
+  const handleExport = async (format: "pdf" | "json" | "markdown") => {
+    try {
+      setIsExporting(true);
+      const blob = await exportResult(resultId, format, {
+        workspaceId: currentWorkspace?.id,
+        projectId: currentProject?.id,
+      });
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `result-${resultId}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`Result exported as ${format.toUpperCase()}`);
+      setShowExportMenu(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to export result");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDuplicate = async () => {
+    try {
+      await duplicateResult(resultId, {
+        workspaceId: currentWorkspace?.id,
+        projectId: currentProject?.id,
+      });
+      toast.success("Result duplicated successfully");
+      mutate(); // Refresh results list
+      setShowActionsMenu(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to duplicate result");
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteResult(resultId, {
+        workspaceId: currentWorkspace?.id,
+        projectId: currentProject?.id,
+      });
+      toast.success("Result deleted successfully");
+      onBack?.(); // Navigate back after deletion
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete result");
+    } finally {
+      setDeleteConfirm(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    try {
+      await archiveResult(resultId, {
+        workspaceId: currentWorkspace?.id,
+        projectId: currentProject?.id,
+      });
+      toast.success("Result archived successfully");
+      mutate(); // Refresh result
+      setShowActionsMenu(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to archive result");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -74,7 +151,89 @@ export function ResultDetailView({ resultId, onBack }: ResultDetailViewProps) {
       {/* Metadata Card */}
       <Card>
         <CardHeader>
-          <CardTitle>Result Details</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Result Details</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  disabled={isExporting}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Export
+                  {isExporting && <span className="animate-spin">...</span>}
+                </Button>
+                {showExportMenu && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-md border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-950 z-10">
+                    <div className="py-1">
+                      <button
+                        onClick={() => handleExport("pdf")}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                      >
+                        Export as PDF
+                      </button>
+                      <button
+                        onClick={() => handleExport("json")}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                      >
+                        Export as JSON
+                      </button>
+                      <button
+                        onClick={() => handleExport("markdown")}
+                        className="w-full px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                      >
+                        Export as Markdown
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="relative">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setShowActionsMenu(!showActionsMenu)}
+                  className="gap-2"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                  Actions
+                </Button>
+                {showActionsMenu && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-md border border-zinc-200 bg-white shadow-lg dark:border-zinc-800 dark:bg-zinc-950 z-10">
+                    <div className="py-1">
+                      <button
+                        onClick={handleDuplicate}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                      >
+                        <Copy className="h-4 w-4" />
+                        Duplicate
+                      </button>
+                      <button
+                        onClick={handleArchive}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                      >
+                        <Archive className="h-4 w-4" />
+                        Archive
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          setDeleteConfirm(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="grid gap-6 sm:grid-cols-2">
@@ -187,6 +346,48 @@ export function ResultDetailView({ resultId, onBack }: ResultDetailViewProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                <AlertCircle className="h-5 w-5" />
+                Delete Result
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Are you sure you want to delete this result? This action cannot be undone.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="secondary" onClick={() => setDeleteConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button variant="primary" onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+                  Delete
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      
+      {/* Close menus when clicking outside */}
+      <React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+          const target = event.target as Element;
+          if (showExportMenu && !target.closest(".relative")) {
+            setShowExportMenu(false);
+          }
+          if (showActionsMenu && !target.closest(".relative")) {
+            setShowActionsMenu(false);
+          }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+      }, [showExportMenu, showActionsMenu]);
     </div>
   );
 }

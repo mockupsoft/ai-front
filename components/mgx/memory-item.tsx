@@ -1,13 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Clock, Hash, MessageCircle, FileText, Lightbulb, Archive, Trash2, Tag } from "lucide-react";
+import { Clock, Hash, MessageCircle, FileText, Lightbulb, Archive, Trash2, Tag, Edit2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MemoryItem } from "@/lib/types";
+import { Button } from "@/components/mgx/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/mgx/ui/card";
 
 interface MemoryItemProps {
   item: MemoryItem;
   onRemove?: (id: string) => void;
+  onEdit?: (id: string, updates: Partial<Omit<MemoryItem, "id" | "timestamp">>) => void;
   className?: string;
 }
 
@@ -54,8 +57,34 @@ const getSourceBadge = (source: MemoryItem["source"]) => {
   }
 };
 
-export function MemoryItemComponent({ item, onRemove, className }: MemoryItemProps) {
+export function MemoryItemComponent({ item, onRemove, onEdit, className }: MemoryItemProps) {
   const [showFullContent, setShowFullContent] = React.useState(false);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editTitle, setEditTitle] = React.useState(item.title);
+  const [editContent, setEditContent] = React.useState(item.content);
+  const [editType, setEditType] = React.useState<MemoryItem["type"]>(item.type);
+  const [editTags, setEditTags] = React.useState(item.tags?.join(", ") || "");
+
+  const handleSave = () => {
+    if (!onEdit) return;
+    
+    const tagsArray = editTags.split(",").map(t => t.trim()).filter(t => t.length > 0);
+    onEdit(item.id, {
+      title: editTitle.trim(),
+      content: editContent.trim(),
+      type: editType,
+      tags: tagsArray,
+    });
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditTitle(item.title);
+    setEditContent(item.content);
+    setEditType(item.type);
+    setEditTags(item.tags?.join(", ") || "");
+    setIsEditing(false);
+  };
 
   const formatTimestamp = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -103,6 +132,15 @@ export function MemoryItemComponent({ item, onRemove, className }: MemoryItemPro
               )}>
                 {item.source}
               </span>
+              {onEdit && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900/50 dark:hover:text-blue-400 transition-all"
+                  title="Edit memory item"
+                >
+                  <Edit2 className="h-3 w-3" />
+                </button>
+              )}
               {onRemove && (
                 <button
                   onClick={() => onRemove(item.id)}
@@ -158,6 +196,76 @@ export function MemoryItemComponent({ item, onRemove, className }: MemoryItemPro
           )}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Edit Memory Item</CardTitle>
+                <button
+                  onClick={handleCancel}
+                  className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Title</label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-zinc-300 rounded-md bg-white dark:border-zinc-700 dark:bg-zinc-950"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Type</label>
+                <select
+                  value={editType}
+                  onChange={(e) => setEditType(e.target.value as MemoryItem["type"])}
+                  className="w-full px-3 py-2 text-sm border border-zinc-300 rounded-md bg-white dark:border-zinc-700 dark:bg-zinc-950"
+                >
+                  <option value="summary">Summary</option>
+                  <option value="fact">Fact</option>
+                  <option value="context">Context</option>
+                  <option value="message">Message</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Content</label>
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  rows={6}
+                  className="w-full px-3 py-2 text-sm border border-zinc-300 rounded-md bg-white dark:border-zinc-700 dark:bg-zinc-950"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Tags (comma-separated)</label>
+                <input
+                  type="text"
+                  value={editTags}
+                  onChange={(e) => setEditTags(e.target.value)}
+                  placeholder="tag1, tag2, tag3"
+                  className="w-full px-3 py-2 text-sm border border-zinc-300 rounded-md bg-white dark:border-zinc-700 dark:bg-zinc-950"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="secondary" onClick={handleCancel}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} disabled={!editTitle.trim() || !editContent.trim()}>
+                  Save
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

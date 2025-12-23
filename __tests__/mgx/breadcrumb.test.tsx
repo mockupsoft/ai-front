@@ -10,9 +10,13 @@ jest.mock("@/lib/api", () => ({
 }));
 
 const mockUsePathname = jest.fn();
+const mockUseRouter = jest.fn();
+const mockUseSearchParams = jest.fn();
 
 jest.mock("next/navigation", () => ({
   usePathname: () => mockUsePathname(),
+  useRouter: () => mockUseRouter(),
+  useSearchParams: () => mockUseSearchParams(),
 }));
 
 jest.mock("next/link", () => {
@@ -25,6 +29,16 @@ jest.mock("next/link", () => {
 
 describe("MgxBreadcrumb", () => {
   beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseRouter.mockReturnValue({
+      push: jest.fn(),
+      replace: jest.fn(),
+      refresh: jest.fn(),
+      back: jest.fn(),
+      forward: jest.fn(),
+      prefetch: jest.fn(),
+    });
+    mockUseSearchParams.mockReturnValue(new URLSearchParams());
     (fetcher as jest.Mock).mockImplementation((path: string) => {
       if (path === "/workspaces") return Promise.resolve([]);
       return Promise.reject(new Error("Unknown path"));
