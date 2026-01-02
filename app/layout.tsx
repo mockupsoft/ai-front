@@ -24,9 +24,58 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                // Remove browser extension classNames immediately to prevent hydration mismatch
+                // This runs before React hydration
+                const removeExtensionClasses = () => {
+                  if (typeof document !== 'undefined' && document.documentElement) {
+                    const html = document.documentElement;
+                    const extensionClasses = ['fusion-extension-loaded'];
+                    extensionClasses.forEach(cls => {
+                      if (html.classList.contains(cls)) {
+                        html.classList.remove(cls);
+                      }
+                    });
+                  }
+                };
+                
+                // Run immediately
+                removeExtensionClasses();
+                
+                // Also run on DOMContentLoaded
+                if (document.readyState === 'loading') {
+                  document.addEventListener('DOMContentLoaded', removeExtensionClasses);
+                } else {
+                  removeExtensionClasses();
+                }
+                
+                // Watch for changes
+                if (typeof MutationObserver !== 'undefined' && document.documentElement) {
+                  const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        removeExtensionClasses();
+                      }
+                    });
+                  });
+                  observer.observe(document.documentElement, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                  });
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         <Providers>{children}</Providers>
       </body>

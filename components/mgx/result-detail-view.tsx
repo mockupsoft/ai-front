@@ -27,8 +27,31 @@ export function ResultDetailView({ resultId, onBack }: ResultDetailViewProps) {
   const [showExportMenu, setShowExportMenu] = React.useState(false);
   const [showActionsMenu, setShowActionsMenu] = React.useState(false);
   const [deleteConfirm, setDeleteConfirm] = React.useState(false);
+  const [formattedCreatedAt, setFormattedCreatedAt] = React.useState<string>("");
+
+  // Format date on client-side only to avoid hydration mismatch
+  React.useEffect(() => {
+    if (result?.createdAt) {
+      setFormattedCreatedAt(new Date(result.createdAt).toLocaleString());
+    }
+  }, [result?.createdAt]);
 
   const relatedTask = result?.taskId ? tasks.find((t) => t.id === result.taskId) : null;
+
+  // Close menus when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showExportMenu && !target.closest(".relative")) {
+        setShowExportMenu(false);
+      }
+      if (showActionsMenu && !target.closest(".relative")) {
+        setShowActionsMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showExportMenu, showActionsMenu]);
 
   const handleExport = async (format: "pdf" | "json" | "markdown") => {
     try {
@@ -263,7 +286,7 @@ export function ResultDetailView({ resultId, onBack }: ResultDetailViewProps) {
                 Created
               </p>
               <p className="mt-1 text-sm">
-                {new Date(result.createdAt).toLocaleString()}
+                {formattedCreatedAt || "Loading..."}
               </p>
             </div>
 
@@ -373,21 +396,6 @@ export function ResultDetailView({ resultId, onBack }: ResultDetailViewProps) {
           </Card>
         </div>
       )}
-      
-      {/* Close menus when clicking outside */}
-      <React.useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-          const target = event.target as Element;
-          if (showExportMenu && !target.closest(".relative")) {
-            setShowExportMenu(false);
-          }
-          if (showActionsMenu && !target.closest(".relative")) {
-            setShowActionsMenu(false);
-          }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-      }, [showExportMenu, showActionsMenu]);
     </div>
   );
 }

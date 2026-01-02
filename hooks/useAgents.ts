@@ -25,10 +25,12 @@ export function useAgents(options?: UseAgentsOptions) {
   const apiOptions: ApiRequestOptions = {
     workspaceId: currentWorkspace?.id,
     projectId: currentProject?.id,
+    taskId: options?.taskId,
+    runId: options?.runId,
   };
 
   const { data, error, isLoading, mutate } = useSWR<AgentInstance[]>(
-    currentWorkspace ? ["/agents", apiOptions] : null,
+    currentWorkspace ? ["/api/agents", apiOptions] : null,
     ([, opts]) => fetchAgentInstances(opts as ApiRequestOptions) as Promise<AgentInstance[]>,
     {
       revalidateOnFocus: true,
@@ -38,11 +40,8 @@ export function useAgents(options?: UseAgentsOptions) {
     }
   );
 
-  const filteredAgents = data?.filter((agent) => {
-    if (options?.taskId && agent.taskId !== options.taskId) return false;
-    if (options?.runId && agent.runId !== options.runId) return false;
-    return true;
-  });
+  // Backend already filters by taskId/runId, so no need to filter again
+  const filteredAgents = data;
 
   const counts: AgentCounts = {
     total: filteredAgents?.length ?? 0,

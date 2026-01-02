@@ -2,10 +2,19 @@ import useSWR from 'swr';
 import { fetcher } from './api';
 import { Task, Run, Metrics } from './types';
 
+interface TaskListResponse {
+  items: Task[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
 export function useTasks() {
-  const { data, error, isLoading, mutate } = useSWR<Task[]>('/tasks', fetcher);
+  const { data, error, isLoading, mutate } = useSWR<TaskListResponse>('/api/tasks/', fetcher);
   return {
-    tasks: data,
+    // Handle both paginated response and direct array (for backwards compatibility)
+    tasks: Array.isArray(data) ? data : (data?.items ?? []),
+    total: Array.isArray(data) ? data.length : (data?.total ?? 0),
     isLoading,
     isError: error,
     mutate,
@@ -13,7 +22,7 @@ export function useTasks() {
 }
 
 export function useTask(id: string) {
-  const { data, error, isLoading, mutate } = useSWR<Task>(id ? `/tasks/${id}` : null, fetcher);
+  const { data, error, isLoading, mutate } = useSWR<Task>(id ? `/api/tasks/${id}` : null, fetcher);
   return {
     task: data,
     isLoading,
@@ -24,7 +33,7 @@ export function useTask(id: string) {
 
 export function useRun(taskId: string, runId?: string) {
   const { data, error, isLoading, mutate } = useSWR<Run>(
-    taskId && runId ? `/tasks/${taskId}/runs/${runId}` : null,
+    taskId && runId ? `/api/tasks/${taskId}/runs/${runId}` : null,
     fetcher
   );
   return {

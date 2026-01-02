@@ -2,7 +2,7 @@ import * as React from "react";
 import { ChatMessage, type ChatMessageProps } from "./chat-message";
 import { TypingIndicator } from "./typing-indicator";
 import { cn } from "@/lib/utils";
-import { Bot, ArrowDown } from "lucide-react";
+import { Bot, ArrowDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/mgx/ui/button";
 
 interface ChatMessageListProps {
@@ -11,6 +11,9 @@ interface ChatMessageListProps {
   typingAgentName?: string;
   taskId?: string;
   onPinToMemory?: (messageId: string, content: string, title: string) => void;
+  onLoadOlder?: () => void;
+  isLoadingMore?: boolean;
+  hasMoreMessages?: boolean;
   className?: string;
 }
 
@@ -20,6 +23,9 @@ export function ChatMessageList({
   typingAgentName,
   taskId,
   onPinToMemory,
+  onLoadOlder,
+  isLoadingMore = false,
+  hasMoreMessages = false,
   className,
 }: ChatMessageListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -30,42 +36,81 @@ export function ChatMessageList({
     bottomRef.current?.scrollIntoView({ behavior });
   }, []);
 
-  const handleScroll = () => {
+  const handleScroll = React.useCallback(() => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
     const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
     setShowScrollButton(!isAtBottom);
-  };
-
-  React.useEffect(() => {
-    // Initial scroll to bottom
-    scrollToBottom("auto");
-  }, []);
-
-  React.useEffect(() => {
-    if (!scrollRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
-
-    if (isAtBottom) {
-      scrollToBottom();
+    
+    // Detect when user scrolls near top (within 200px) to load older messages
+    if (scrollTop < 200 && hasMoreMessages && !isLoadingMore && onLoadOlder) {
+      onLoadOlder();
     }
-  }, [messages, isTyping, scrollToBottom]);
+  }, [hasMoreMessages, isLoadingMore, onLoadOlder]);
+
+  // Scroll to bottom when messages are first loaded or when new messages are added
+  React.useEffect(() => {
+    // Always scroll to bottom when messages change (initial load or new messages)
+    // This ensures newest messages (at the bottom) are visible
+    // Use requestAnimationFrame + setTimeout to ensure DOM is fully rendered
+    const scrollTimeout = setTimeout(() => {
+      requestAnimationFrame(() => {
+        if (bottomRef.current && scrollRef.current) {
+          // Force scroll to bottom by setting scrollTop to max
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        } else {
+          // Fallback to scrollIntoView
+          scrollToBottom("auto");
+        }
+      });
+    }, 150);
+    return () => clearTimeout(scrollTimeout);
+  }, [messages.length, scrollToBottom]);
+
+  // Auto-scroll when new messages arrive (if user is already at bottom)
+  React.useEffect(() => {
+    if (!scrollRef.current || messages.length === 0) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    // Check if user is near the bottom (within 150px threshold)
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 150;
+
+    // Only auto-scroll to bottom if user is already at the bottom
+    // This prevents interrupting user's manual scrolling
+    if (isAtBottom) {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
+    }
+  }, [messages, isTyping]);
 
   return (
-    <div className={cn("relative flex flex-1 flex-col overflow-hidden", className)}>
+    <div className={cn("relative flex flex-1 flex-col overflow-hidden", className)} style={{ minHeight: 0 }}>
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4"
+        style={{ minHeight: 0 }}
       >
-        <div className="flex justify-center py-4 text-xs text-zinc-400">
-          <span>Start of conversation</span>
-        </div>
+        {/* Loading indicator for older messages */}
+        {isLoadingMore && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
+          </div>
+        )}
         
-        {messages.map((message, index) => (
+        {!hasMoreMessages && messages.length > 0 && (
+          <div className="flex justify-center py-4 text-xs text-zinc-400">
+            <span>Start of conversation</span>
+          </div>
+        )}
+        
+        {messages.map((message) => (
           <ChatMessage 
-            key={index} 
+            key={message.messageId || message.timestamp || `msg-${message.content?.substring(0, 20)}`} 
             {...message} 
             taskId={taskId}
             onPinToMemory={onPinToMemory}

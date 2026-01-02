@@ -290,7 +290,7 @@ export function MemoryInspector({ taskId, className, onMemoryUpdate }: MemoryIns
 
   // Filter items based on search term
   const filteredItems = React.useMemo(() => {
-    if (!currentMemory || !searchTerm.trim()) return currentMemory.items;
+    if (!currentMemory || !searchTerm.trim()) return currentMemory?.items || [];
     
     const term = searchTerm.toLowerCase();
     return currentMemory.items.filter(item => 

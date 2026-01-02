@@ -147,10 +147,10 @@ export function LlmProviderSelector({
                         <Loader2 className="h-3 w-3 animate-spin text-zinc-400" />
                       )}
                       {isSelected && !isCheckingAvailability && isAvailable && (
-                        <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" title="Available" />
+                        <CheckCircle className="h-3 w-3 text-green-600 dark:text-green-400" aria-label="Available" />
                       )}
                       {isSelected && !isCheckingAvailability && !isAvailable && (
-                        <AlertCircle className="h-3 w-3 text-red-600 dark:text-red-400" title="Not available" />
+                        <AlertCircle className="h-3 w-3 text-red-600 dark:text-red-400" aria-label="Not available" />
                       )}
                     </div>
                     <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">

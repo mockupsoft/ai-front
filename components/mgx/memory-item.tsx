@@ -64,6 +64,34 @@ export function MemoryItemComponent({ item, onRemove, onEdit, className }: Memor
   const [editContent, setEditContent] = React.useState(item.content);
   const [editType, setEditType] = React.useState<MemoryItem["type"]>(item.type);
   const [editTags, setEditTags] = React.useState(item.tags?.join(", ") || "");
+  const [formattedTimestamp, setFormattedTimestamp] = React.useState<string>("");
+
+  // Format timestamp on client-side only to avoid hydration mismatch
+  React.useEffect(() => {
+    const formatTimestamp = (timestamp: number) => {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      
+      // Use ISO format instead of toLocaleDateString() to avoid locale mismatch
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    if (item.timestamp) {
+      setFormattedTimestamp(formatTimestamp(item.timestamp));
+    }
+  }, [item.timestamp]);
 
   const handleSave = () => {
     if (!onEdit) return;
@@ -84,21 +112,6 @@ export function MemoryItemComponent({ item, onRemove, onEdit, className }: Memor
     setEditType(item.type);
     setEditTags(item.tags?.join(", ") || "");
     setIsEditing(false);
-  };
-
-  const formatTimestamp = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
   };
 
   const formatSize = (size?: number) => {
@@ -173,7 +186,7 @@ export function MemoryItemComponent({ item, onRemove, onEdit, className }: Memor
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {formatTimestamp(item.timestamp)}
+                {formattedTimestamp || "Loading..."}
               </span>
               {item.size && (
                 <span>{formatSize(item.size)}</span>

@@ -47,17 +47,33 @@ function getStatusVariant(status: string): "success" | "warning" | "danger" | "i
   }
 }
 
-function formatDate(dateString?: string): string {
-  if (!dateString) return "Never";
-  const date = new Date(dateString);
-  return date.toLocaleString();
-}
-
 export function RepositoriesList({
   repositories = [],
   isLoading = false,
   onRefresh,
 }: RepositoriesListProps) {
+  // Format dates on client-side only to avoid hydration mismatch
+  const [formattedDates, setFormattedDates] = React.useState<Record<string, string>>({});
+  
+  React.useEffect(() => {
+    const formatted: Record<string, string> = {};
+    repositories.forEach((repo) => {
+      const dateStr = (repo as any).lastSyncTime || (repo as any).lastSyncedAt;
+      if (dateStr) {
+        try {
+          formatted[dateStr] = new Date(dateStr).toLocaleString();
+        } catch {
+          formatted[dateStr] = dateStr;
+        }
+      }
+    });
+    setFormattedDates(formatted);
+  }, [repositories]);
+
+  const formatDate = (dateString?: string): string => {
+    if (!dateString) return "Never";
+    return formattedDates[dateString] || dateString;
+  };
   const { currentProject, currentWorkspace } = useWorkspace();
   const [refressingId, setRefressingId] = React.useState<string | null>(null);
   const [disconnectingId, setDisconnectingId] = React.useState<string | null>(null);

@@ -20,11 +20,25 @@ import type {
 } from "@/lib/types/workflows";
 import type { Workspace } from "@/lib/types/workspace";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_MGX_API_BASE_URL ??
-  process.env.NEXT_PUBLIC_API_URL ??
-  MGX_API_BASE_URL ??
-  "http://localhost:8000";
+// API Base URL resolution - prioritize environment variables, fallback to localhost:8000
+// Always use http://localhost:8000 as fallback since frontend runs in browser
+// IMPORTANT: In Next.js, NEXT_PUBLIC_* variables are embedded at build time
+// If they're not set, we fallback to localhost:8000 which should work from browser
+const getApiBase = (): string => {
+  // Check in order: MGX_API_BASE_URL, API_URL, then fallback
+  if (typeof window !== 'undefined') {
+    // Client-side: use window location or fallback
+    return process.env.NEXT_PUBLIC_MGX_API_BASE_URL ?? 
+           process.env.NEXT_PUBLIC_API_URL ?? 
+           "http://localhost:8000";
+  }
+  // Server-side: same logic
+  return process.env.NEXT_PUBLIC_MGX_API_BASE_URL ?? 
+         process.env.NEXT_PUBLIC_API_URL ?? 
+         "http://localhost:8000";
+};
+
+const API_BASE = getApiBase();
 
 function joinPath(basePath: string, path: string) {
   const base = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
@@ -40,6 +54,8 @@ function resolveUrl(path: string) {
 export interface ApiRequestOptions {
   workspaceId?: string;
   projectId?: string;
+  taskId?: string;
+  runId?: string;
   headers?: Record<string, string>;
 }
 
@@ -52,6 +68,14 @@ function buildScopedUrl(path: string, options?: ApiRequestOptions): string {
   
   if (options?.projectId) {
     url.searchParams.set("project_id", options.projectId);
+  }
+  
+  if (options?.taskId) {
+    url.searchParams.set("task_id", options.taskId);
+  }
+  
+  if (options?.runId) {
+    url.searchParams.set("run_id", options.runId);
   }
   
   return url.toString();
@@ -79,11 +103,27 @@ export async function fetcher<T>(path: string, options?: ApiRequestOptions): Pro
   const url = options ? buildScopedUrl(path, options) : resolveUrl(path);
   const headers = buildHeaders(options);
   
-  const res = await fetch(url, { headers });
-  if (!res.ok) {
-    throw new Error("An error occurred while fetching the data.");
+  try {
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      let errorMessage = `HTTP ${res.status}: ${res.statusText}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.detail || errorData.message || errorMessage;
+      } catch {
+        // If response is not JSON, use status text
+      }
+      const error = new Error(errorMessage);
+      (error as any).status = res.status;
+      throw error;
+    }
+    return res.json() as Promise<T>;
+  } catch (err) {
+    if (err instanceof TypeError && err.message.includes('fetch')) {
+      throw new Error(`Network error: Cannot connect to ${url}. Make sure the backend is running.`);
+    }
+    throw err;
   }
-  return res.json() as Promise<T>;
 }
 
 // Legacy fetcher for backwards compatibility
@@ -92,14 +132,24 @@ export async function legacyFetcher<T>(path: string): Promise<T> {
 }
 
 export async function triggerRun(taskId: string, options?: ApiRequestOptions) {
-  const url = options ? buildScopedUrl(`/tasks/${taskId}/run`, options) : resolveUrl(`/tasks/${taskId}/run`);
+  const url = options ? buildScopedUrl(`/api/runs/`, options) : resolveUrl(`/api/runs/`);
   const headers = buildHeaders(options);
   
   const res = await fetch(url, {
     method: "POST",
     headers,
+    body: JSON.stringify({ task_id: taskId }),
   });
-  if (!res.ok) throw new Error("Failed to trigger run");
+  if (!res.ok) {
+    let errorMessage = `Failed to trigger run (${res.status})`;
+    try {
+      const errorData = await res.json();
+      errorMessage = errorData.detail || errorData.message || errorMessage;
+    } catch {
+      // If response is not JSON, use status text
+    }
+    throw new Error(errorMessage);
+  }
   return res.json();
 }
 
@@ -117,18 +167,25 @@ export async function reviewPlan(
   opts: { decision: "approve" | "reject"; comment?: string },
   options?: ApiRequestOptions,
 ) {
+  // Use correct endpoint: /api/runs/{run_id}/approve
   const url = options 
-    ? buildScopedUrl(`/tasks/${taskId}/runs/${runId}/${opts.decision}`, options)
-    : resolveUrl(`/tasks/${taskId}/runs/${runId}/${opts.decision}`);
+    ? buildScopedUrl(`/api/runs/${runId}/approve`, options)
+    : resolveUrl(`/api/runs/${runId}/approve`);
   const headers = buildHeaders(options);
   
   const res = await fetch(url, {
     method: "POST",
     headers,
-    body: JSON.stringify({ comment: opts.comment ?? "" }),
+    body: JSON.stringify({ 
+      approved: opts.decision === "approve",
+      feedback: opts.comment ?? "" 
+    }),
   });
 
-  if (!res.ok) throw new Error(`Failed to ${opts.decision} plan`);
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || error.message || `Failed to ${opts.decision} plan`);
+  }
   return res.json();
 }
 
@@ -141,15 +198,51 @@ export async function downloadArtifact(taskId: string, runId: string, artifactId
   window.open(url, "_blank");
 }
 
-export async function createTask(name: string, description?: string) {
-  const res = await fetch(resolveUrl("/tasks"), {
+export async function createTask(
+  name: string, 
+  description?: string,
+  options?: ApiRequestOptions
+) {
+  const url = options 
+    ? buildScopedUrl("/api/tasks/", options)
+    : resolveUrl("/api/tasks/");
+  const headers = buildHeaders(options);
+  
+  const res = await fetch(url, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
+    headers,
     body: JSON.stringify({ name, description }),
   });
-  if (!res.ok) throw new Error("Failed to create task");
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    const errorMessage = error?.detail || error?.message || `Failed to create task (${res.status})`;
+    console.error("Create task error:", { status: res.status, error, url });
+    throw new Error(errorMessage);
+  }
+  return res.json();
+}
+
+export async function updateTask(
+  taskId: string,
+  data: { name?: string; description?: string },
+  options?: ApiRequestOptions
+) {
+  const url = options
+    ? buildScopedUrl(`/api/tasks/${taskId}`, options)
+    : resolveUrl(`/api/tasks/${taskId}`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    const errorMessage = error?.detail || error?.message || `Failed to update task (${res.status})`;
+    console.error("Update task error:", { status: res.status, error, url });
+    throw new Error(errorMessage);
+  }
   return res.json();
 }
 
@@ -575,31 +668,227 @@ export async function getCompareDiff(
 export async function fetchAgentInstances(
   options?: ApiRequestOptions,
 ): Promise<AgentInstance[]> {
-  return fetcher<AgentInstance[]>("/agents", options);
+  const response = await fetcher<{ items: AgentInstance[] }>("/api/agents", options);
+  return response?.items ?? [];
 }
 
 export async function fetchAgentDefinitions(
   options?: ApiRequestOptions,
 ): Promise<AgentDefinition[]> {
-  return fetcher<AgentDefinition[]>("/agents/definitions", options);
+  return fetcher<AgentDefinition[]>("/api/agents/definitions", options);
 }
 
 export async function fetchAgentContext(
   agentId: string,
   options?: ApiRequestOptions
 ) {
-  return fetcher(`/agents/${agentId}/context`, options);
+  return fetcher(`/api/agents/${agentId}/context`, options);
 }
 
 export async function fetchAgentMessages(
-  agentId: string,
+  agentId: string | null,
   limit?: number,
   offset?: number,
-  options?: ApiRequestOptions
-) {
+  options?: ApiRequestOptions & { taskId?: string; runId?: string; beforeId?: string; beforeTimestamp?: string }
+): Promise<AgentMessage[]> {
+  // If no agentId but taskId/runId provided, use task-based endpoint
+  if (!agentId && (options?.taskId || options?.runId)) {
+    const url = options
+      ? buildScopedUrl(`/api/agents/messages`, options)
+      : resolveUrl(`/api/agents/messages`);
+    
+    const urlObj = new URL(url);
+    if (options?.taskId) urlObj.searchParams.set("task_id", options.taskId);
+    if (options?.runId) urlObj.searchParams.set("run_id", options.runId);
+    if (limit) urlObj.searchParams.set("limit", String(limit));
+    if (offset) urlObj.searchParams.set("skip", String(offset));
+    if (options?.beforeId) urlObj.searchParams.set("before_id", options.beforeId);
+    if (options?.beforeTimestamp) urlObj.searchParams.set("before_timestamp", options.beforeTimestamp);
+    
+    // Debug: Log the URL and parameters
+    const isDev = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || process.env.NODE_ENV !== "production");
+    if (isDev) {
+      console.debug("[fetchAgentMessages] Requesting messages with URL:", urlObj.toString(), {
+        taskId: options?.taskId,
+        runId: options?.runId,
+        limit,
+        offset,
+      });
+    }
+    
+    const headers = buildHeaders(options);
+    const res = await fetch(urlObj.toString(), { headers });
+    
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      console.warn("[fetchAgentMessages] Failed to fetch messages by task/run:", error.detail || error.message, {
+        taskId: options?.taskId,
+        runId: options?.runId,
+        status: res.status,
+      });
+      return [];
+    }
+    const backendMessages = await res.json();
+    
+    // Debug: Log response
+    if (isDev) {
+      console.debug("[fetchAgentMessages] Received messages from backend:", {
+        taskId: options?.taskId,
+        runId: options?.runId,
+        count: backendMessages.length,
+        messageTaskIds: backendMessages.map((m: any) => m.task_id).filter((id: string, idx: number, arr: string[]) => arr.indexOf(id) === idx), // Unique taskIds
+      });
+    }
+    
+    // Backend's list_messages_by_task returns messages in ASC order (oldest first, newest last)
+    // This is correct - we want newest messages at the bottom
+    // Convert backend AgentMessageResponse to frontend AgentMessage format
+    return backendMessages.map((msg: any) => {
+      // Extract content from payload
+      // IMPORTANT: payload might be a string (JSON) or object
+      let payload = msg.payload || {};
+      if (typeof payload === "string") {
+        try {
+          payload = JSON.parse(payload);
+        } catch {
+          payload = {};
+        }
+      }
+      
+      let content = "";
+      if (typeof payload === "string") {
+        content = payload;
+      } else if (payload.message) {
+        content = typeof payload.message === "string" ? payload.message : JSON.stringify(payload.message);
+      } else if (payload.content) {
+        content = typeof payload.content === "string" ? payload.content : JSON.stringify(payload.content);
+      } else if (payload.text) {
+        content = typeof payload.text === "string" ? payload.text : JSON.stringify(payload.text);
+      } else if (Object.keys(payload).length > 0) {
+        content = JSON.stringify(payload, null, 2);
+      }
+      
+      // Determine role from direction
+      // IMPORTANT: "inbound" = user message, "outbound" = agent message, "system" = system message
+      let role: "user" | "assistant" | "system" = "assistant";
+      if (msg.direction === "inbound") {
+        role = "user";
+      } else if (msg.direction === "system") {
+        role = "system";
+      } else if (msg.direction === "outbound") {
+        role = "assistant";
+      }
+      
+      // Also check payload.type for user messages
+      if (payload.type === "user_message" || payload.type === "inbound") {
+        role = "user";
+      }
+      
+      // Extract actionType from payload
+      const actionType = payload.actionType || payload.type || (msg.direction === "system" ? "system" : undefined);
+      
+      // Extract agent name with priority: payload.agent_name > payload.agentName > role mapping > "Agent"
+      // Note: payload is already parsed above if it was a string
+      let agentName = payload.agent_name || payload.agentName;
+      
+      // Debug logging in development
+      if (process.env.NODE_ENV === "development" && !agentName && (payload.type === "execution_started" || payload.type === "task_started")) {
+        console.debug("[fetchAgentMessages] Payload for agent name:", {
+          payload_type: payload.type,
+          payload_agent_name: payload.agent_name,
+          payload_role: payload.role,
+          full_payload_keys: Object.keys(payload),
+        });
+      }
+      
+      // If no agent name, try to map from role
+      if (!agentName && payload.role) {
+        const roleNameMap: Record<string, string> = {
+          "TeamLeader": "Mike",
+          "Engineer": "Alex",
+          "Tester": "Bob",
+          "Reviewer": "Charlie",
+        };
+        agentName = roleNameMap[payload.role] || payload.role;
+      }
+      
+      // Also check msg.agent_name directly (from backend response)
+      if (!agentName && msg.agent_name) {
+        agentName = msg.agent_name;
+      }
+      
+      // Final fallback
+      if (!agentName) {
+        agentName = "Agent";
+      }
+      
+      // Parse timestamp from created_at - ensure it's a valid timestamp
+      // Each message should have its own unique timestamp
+      let messageTimestamp = Date.now(); // Default fallback (but should not be used if created_at exists)
+      if (msg.created_at) {
+        try {
+          // Handle both ISO string and timestamp number formats
+          let dateValue: Date;
+          if (typeof msg.created_at === 'string') {
+            dateValue = new Date(msg.created_at);
+          } else if (typeof msg.created_at === 'number') {
+            dateValue = new Date(msg.created_at);
+          } else {
+            // Try to convert to string first
+            dateValue = new Date(String(msg.created_at));
+          }
+          
+          if (!isNaN(dateValue.getTime())) {
+            messageTimestamp = dateValue.getTime();
+            
+            // Debug logging in development
+            if (process.env.NODE_ENV === "development") {
+              console.debug("[fetchAgentMessages] Parsed timestamp:", {
+                messageId: msg.id.substring(0, 8),
+                created_at: msg.created_at,
+                parsedTimestamp: messageTimestamp,
+                formattedTime: dateValue.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+              });
+            }
+          } else {
+            console.warn("[fetchAgentMessages] Invalid created_at date:", msg.created_at, "for message:", msg.id);
+          }
+        } catch (e) {
+          console.warn("[fetchAgentMessages] Error parsing created_at:", msg.created_at, "for message:", msg.id, e);
+        }
+      } else {
+        console.warn("[fetchAgentMessages] Missing created_at for message:", msg.id);
+      }
+      
+      return {
+        id: msg.id,
+        taskId: msg.task_id || options?.taskId || "",
+        runId: msg.run_id || options?.runId,
+        agentName: agentName, // Use extracted agent name (Bob, Mike, Alex, Charlie)
+        role,
+        content: content || payload.type || actionType || "Message",
+        timestamp: messageTimestamp,
+        actionType: actionType as "thinking" | "executing" | "completed" | "error" | undefined,
+        payload: payload,
+        sender_agent_id: payload.sender_agent_id || payload.senderAgentId,
+        recipient_agent_id: payload.recipient_agent_id || payload.recipientAgentId,
+        llm_provider: payload.llm_provider || payload.llmProvider,
+        llm_model: payload.llm_model || payload.llmModel,
+        // Include created_at as a fallback for timestamp parsing
+        created_at: msg.created_at,
+      } as AgentMessage;
+    });
+  }
+  
+  // Fallback to agent_id-based endpoint
+  if (!agentId) {
+    console.warn("No agentId or taskId/runId provided, cannot fetch messages");
+    return [];
+  }
+  
   const url = options
-    ? buildScopedUrl(`/agents/${agentId}/messages`, options)
-    : resolveUrl(`/agents/${agentId}/messages`);
+    ? buildScopedUrl(`/api/agents/${agentId}/messages`, options)
+    : resolveUrl(`/api/agents/${agentId}/messages`);
   
   const urlObj = new URL(url);
   if (limit) urlObj.searchParams.set("limit", String(limit));
@@ -608,15 +897,165 @@ export async function fetchAgentMessages(
   const headers = buildHeaders(options);
   const res = await fetch(urlObj.toString(), { headers });
   
-  if (!res.ok) throw new Error("Failed to fetch agent messages");
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    console.warn("Failed to fetch agent messages:", error.detail || error.message);
+    return [];
+  }
   return res.json();
+}
+
+export async function sendAgentMessage(
+  agentId: string,
+  content: string,
+  direction: "inbound" | "outbound" = "inbound",
+  correlationId?: string,
+  options?: ApiRequestOptions & { taskId?: string; runId?: string }
+): Promise<AgentMessage> {
+  const url = options
+    ? buildScopedUrl(`/api/agents/${agentId}/messages`, options)
+    : resolveUrl(`/api/agents/${agentId}/messages`);
+  const headers = buildHeaders(options);
+  
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      direction,
+      payload: {
+        message: content,
+        content: content,
+        type: "user_message",
+      },
+      correlation_id: correlationId,
+      task_id: options?.taskId,
+      run_id: options?.runId,
+    }),
+  });
+  
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || error.message || "Failed to send message");
+  }
+  const backendMsg = await res.json();
+  
+  // Convert backend AgentMessageResponse to frontend AgentMessage format
+  // Same logic as in fetchAgentMessages
+  const payload = backendMsg.payload || {};
+  let extractedContent = "";
+  if (typeof payload === "string") {
+    extractedContent = payload;
+  } else if (payload.message) {
+    extractedContent = typeof payload.message === "string" ? payload.message : JSON.stringify(payload.message);
+  } else if (payload.content) {
+    extractedContent = typeof payload.content === "string" ? payload.content : JSON.stringify(payload.content);
+  } else if (payload.text) {
+    extractedContent = typeof payload.text === "string" ? payload.text : JSON.stringify(payload.text);
+  } else if (Object.keys(payload).length > 0) {
+    extractedContent = JSON.stringify(payload, null, 2);
+  }
+  
+  // Determine role from direction
+  let role: "user" | "assistant" | "system" = "assistant";
+  if (backendMsg.direction === "inbound") role = "user";
+  if (backendMsg.direction === "system") role = "system";
+  
+  // Extract agent name from payload
+  const agentName = payload.agent_name || backendMsg.agent_name || "Agent";
+  
+  return {
+    id: backendMsg.id || backendMsg.message_id || String(Date.now()),
+    taskId: backendMsg.task_id || options?.taskId || "",
+    runId: backendMsg.run_id || options?.runId,
+    agentName: agentName,
+    role: role,
+    content: extractedContent,
+    timestamp: backendMsg.timestamp ? (typeof backendMsg.timestamp === "number" ? backendMsg.timestamp : new Date(backendMsg.timestamp).getTime()) : Date.now(),
+    actionType: payload.action_type || backendMsg.action_type,
+    payload: payload,
+  } as AgentMessage;
+}
+
+export async function sendMessageByTask(
+  content: string,
+  direction: "inbound" | "outbound" = "inbound",
+  correlationId?: string,
+  options?: ApiRequestOptions & { taskId?: string; runId?: string }
+): Promise<AgentMessage> {
+  if (!options?.taskId) {
+    throw new Error("taskId is required");
+  }
+  
+  const url = options
+    ? buildScopedUrl(`/api/agents/messages`, options)
+    : resolveUrl(`/api/agents/messages`);
+  const headers = buildHeaders(options);
+  
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      direction,
+      payload: {
+        message: content,
+        content: content,
+        type: "user_message",
+      },
+      correlation_id: correlationId,
+      task_id: options.taskId,
+      run_id: options.runId,
+    }),
+  });
+  
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || error.message || "Failed to send message");
+  }
+  const backendMsg = await res.json();
+  
+  // Convert backend AgentMessageResponse to frontend AgentMessage format
+  // Same logic as in fetchAgentMessages
+  const payload = backendMsg.payload || {};
+  let extractedContent = "";
+  if (typeof payload === "string") {
+    extractedContent = payload;
+  } else if (payload.message) {
+    extractedContent = typeof payload.message === "string" ? payload.message : JSON.stringify(payload.message);
+  } else if (payload.content) {
+    extractedContent = typeof payload.content === "string" ? payload.content : JSON.stringify(payload.content);
+  } else if (payload.text) {
+    extractedContent = typeof payload.text === "string" ? payload.text : JSON.stringify(payload.text);
+  } else if (Object.keys(payload).length > 0) {
+    extractedContent = JSON.stringify(payload, null, 2);
+  }
+  
+  // Determine role from direction
+  let role: "user" | "assistant" | "system" = "assistant";
+  if (backendMsg.direction === "inbound") role = "user";
+  if (backendMsg.direction === "system") role = "system";
+  
+  // Extract agent name from payload
+  const agentName = payload.agent_name || backendMsg.agent_name || "Agent";
+  
+  return {
+    id: backendMsg.id || backendMsg.message_id || String(Date.now()),
+    taskId: backendMsg.task_id || options.taskId || "",
+    runId: backendMsg.run_id || options.runId,
+    agentName: agentName,
+    role: role,
+    content: extractedContent,
+    timestamp: backendMsg.timestamp ? (typeof backendMsg.timestamp === "number" ? backendMsg.timestamp : new Date(backendMsg.timestamp).getTime()) : Date.now(),
+    actionType: payload.action_type || backendMsg.action_type,
+    payload: payload,
+    created_at: backendMsg.created_at || new Date().toISOString(),
+  } as AgentMessage;
 }
 
 export async function fetchAgentContextHistory(
   agentId: string,
   options?: ApiRequestOptions
 ) {
-  return fetcher(`/agents/${agentId}/context/history`, options);
+  return fetcher(`/api/agents/${agentId}/context/history`, options);
 }
 
 export async function updateAgentConfig(
@@ -625,8 +1064,8 @@ export async function updateAgentConfig(
   options?: ApiRequestOptions
 ) {
   const url = options
-    ? buildScopedUrl(`/agents/${agentId}`, options)
-    : resolveUrl(`/agents/${agentId}`);
+    ? buildScopedUrl(`/api/agents/${agentId}`, options)
+    : resolveUrl(`/api/agents/${agentId}`);
   const headers = buildHeaders(options);
 
   const res = await fetch(url, {
@@ -644,8 +1083,8 @@ export async function activateAgent(
   options?: ApiRequestOptions
 ) {
   const url = options
-    ? buildScopedUrl(`/agents/${agentId}/activate`, options)
-    : resolveUrl(`/agents/${agentId}/activate`);
+    ? buildScopedUrl(`/api/agents/${agentId}/activate`, options)
+    : resolveUrl(`/api/agents/${agentId}/activate`);
   const headers = buildHeaders(options);
 
   const res = await fetch(url, {
@@ -662,8 +1101,8 @@ export async function deactivateAgent(
   options?: ApiRequestOptions
 ) {
   const url = options
-    ? buildScopedUrl(`/agents/${agentId}/deactivate`, options)
-    : resolveUrl(`/agents/${agentId}/deactivate`);
+    ? buildScopedUrl(`/api/agents/${agentId}/deactivate`, options)
+    : resolveUrl(`/api/agents/${agentId}/deactivate`);
   const headers = buildHeaders(options);
 
   const res = await fetch(url, {
@@ -680,8 +1119,8 @@ export async function shutdownAgent(
   options?: ApiRequestOptions
 ) {
   const url = options
-    ? buildScopedUrl(`/agents/${agentId}/shutdown`, options)
-    : resolveUrl(`/agents/${agentId}/shutdown`);
+    ? buildScopedUrl(`/api/agents/${agentId}/shutdown`, options)
+    : resolveUrl(`/api/agents/${agentId}/shutdown`);
   const headers = buildHeaders(options);
 
   const res = await fetch(url, {
@@ -699,8 +1138,8 @@ export async function rollbackAgentContext(
   options?: ApiRequestOptions
 ) {
   const url = options
-    ? buildScopedUrl(`/agents/${agentId}/context/rollback`, options)
-    : resolveUrl(`/agents/${agentId}/context/rollback`);
+    ? buildScopedUrl(`/api/agents/${agentId}/context/rollback`, options)
+    : resolveUrl(`/api/agents/${agentId}/context/rollback`);
   const headers = buildHeaders(options);
 
   const res = await fetch(url, {
@@ -883,7 +1322,93 @@ export async function fetchExecutionMetrics(
 export async function fetchWorkspaceWorkspaces(
   options?: ApiRequestOptions,
 ): Promise<Workspace[]> {
-  return fetcher<Workspace[]>('/workspaces', options);
+  // Backend returns WorkspaceListResponse with items array
+  // Add trailing slash to avoid 307 redirect
+  const url = options ? buildScopedUrl('/api/workspaces/', options) : resolveUrl('/api/workspaces/');
+  const headers = buildHeaders(options);
+  
+  // Debug: Always log in development to see what's happening
+  if (typeof window !== 'undefined') {
+    console.log('[fetchWorkspaceWorkspaces] Request URL:', url);
+    console.log('[fetchWorkspaceWorkspaces] API_BASE:', API_BASE);
+    console.log('[fetchWorkspaceWorkspaces] Full URL will be:', url);
+  }
+  
+  try {
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    if (typeof window !== 'undefined') {
+      console.log('[fetchWorkspaceWorkspaces] Making fetch request to:', url);
+    }
+    
+    const res = await fetch(url, { 
+      method: 'GET',
+      headers: {
+        ...headers,
+        'Accept': 'application/json',
+      },
+      signal: controller.signal,
+      // Don't use credentials to avoid CORS issues with wildcard origins
+      // credentials: 'include',
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (typeof window !== 'undefined') {
+      console.log('[fetchWorkspaceWorkspaces] Response status:', res.status, res.statusText);
+    }
+    
+    if (!res.ok) {
+      let errorMessage = `HTTP ${res.status}: ${res.statusText}`;
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.detail || errorData.message || errorMessage;
+      } catch {
+        // If response is not JSON, use status text
+      }
+      throw new Error(errorMessage);
+    }
+    
+    const response = await res.json() as { items: any[]; total: number; skip: number; limit: number };
+    
+    // Transform backend response to frontend format
+    const workspaces = (response.items || []).map((item) => ({
+      id: item.id,
+      name: item.name,
+      slug: item.slug || '',
+      metadata: item.metadata || item.workspace_metadata || {},
+      createdAt: item.created_at || item.createdAt || new Date().toISOString(),
+      updatedAt: item.updated_at || item.updatedAt || new Date().toISOString(),
+      userId: item.userId || '',
+      isActive: item.isActive !== undefined ? item.isActive : true,
+    }));
+    
+    return workspaces;
+  } catch (err) {
+    // Enhanced error logging
+    if (typeof window !== 'undefined') {
+      console.error('[fetchWorkspaceWorkspaces] Error caught:', err);
+      console.error('[fetchWorkspaceWorkspaces] Error type:', err instanceof Error ? err.name : typeof err);
+      console.error('[fetchWorkspaceWorkspaces] Error message:', err instanceof Error ? err.message : String(err));
+      console.error('[fetchWorkspaceWorkspaces] Failed URL:', url);
+      if (err instanceof Error && err.stack) {
+        console.error('[fetchWorkspaceWorkspaces] Stack:', err.stack);
+      }
+    }
+    
+    // Handle network errors, timeouts, etc.
+    if (err instanceof Error) {
+      if (err.name === 'AbortError') {
+        throw new Error(`Request timeout: Backend did not respond within 15 seconds`);
+      }
+      // Re-throw with original message for SWR to handle
+      throw err;
+    }
+    // Re-throw unknown errors
+    throw new Error(`Failed to fetch workspaces: ${String(err)}`);
+  }
 }
 
 export async function createWorkspace(
@@ -891,7 +1416,7 @@ export async function createWorkspace(
   description?: string,
   options?: ApiRequestOptions
 ): Promise<Workspace> {
-  const url = options ? buildScopedUrl('/workspaces', options) : resolveUrl('/workspaces');
+  const url = options ? buildScopedUrl('/api/workspaces', options) : resolveUrl('/api/workspaces');
   const headers = buildHeaders(options);
 
   const res = await fetch(url, {
@@ -913,7 +1438,211 @@ export async function fetchLlmModels(
   provider: LlmProvider,
   options?: ApiRequestOptions,
 ): Promise<LlmModel[]> {
-  return fetcher<LlmModel[]>(`/llm/models/${provider}`, options);
+  return fetcher<LlmModel[]>(`/api/llm/models?provider=${provider}`, options);
+}
+
+// LLM Health and Provider Management
+export interface LlmProviderHealth {
+  provider: string;
+  configured: boolean;
+  model_count: number;
+  models: string[];
+}
+
+export interface LlmHealthResponse {
+  routing_strategy: string;
+  fallback_enabled: boolean;
+  prefer_local: boolean;
+  providers: LlmProviderHealth[];
+}
+
+export async function fetchLlmHealth(options?: ApiRequestOptions): Promise<LlmHealthResponse> {
+  return fetcher<LlmHealthResponse>("/api/llm/health", options);
+}
+
+export interface LlmRouteRequest {
+  required_capability?: string;
+  strategy?: "balanced" | "cost_optimized" | "latency_optimized" | "quality_optimized" | "local_first";
+  budget_remaining?: number;
+  prefer_local?: boolean;
+}
+
+export interface LlmRouteResponse {
+  provider: string;
+  model: string;
+  reason: string;
+}
+
+export async function fetchLlmRoute(
+  request: LlmRouteRequest,
+  options?: ApiRequestOptions
+): Promise<LlmRouteResponse> {
+  const url = buildScopedUrl("/api/llm/route", options);
+  const headers = buildHeaders(options);
+  
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(request),
+  });
+  
+  if (!res.ok) throw new Error("Failed to route LLM request");
+  return res.json();
+}
+
+// Ollama Management APIs
+export interface OllamaModelInfo {
+  name: string;
+  size?: number;
+  modified_at?: string;
+}
+
+export interface OllamaListResponse {
+  models: OllamaModelInfo[];
+  connected: boolean;
+  base_url: string;
+}
+
+export interface OllamaPullRequest {
+  model: string;
+}
+
+export interface OllamaPullResponse {
+  success: boolean;
+  message: string;
+  model: string;
+}
+
+export interface OllamaDeleteRequest {
+  model: string;
+}
+
+export interface OllamaDeleteResponse {
+  success: boolean;
+  message: string;
+  model: string;
+}
+
+export interface OllamaHealthResponse {
+  connected: boolean;
+  base_url: string;
+  model_count: number;
+  models: string[];
+}
+
+export async function fetchOllamaModels(options?: ApiRequestOptions): Promise<OllamaListResponse> {
+  return fetcher<OllamaListResponse>("/api/llm/ollama/models", options);
+}
+
+export async function pullOllamaModel(
+  model: string,
+  options?: ApiRequestOptions
+): Promise<OllamaPullResponse> {
+  const url = buildScopedUrl("/api/llm/ollama/pull", options);
+  const headers = buildHeaders(options);
+  
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ model }),
+  });
+  
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || error.message || "Failed to pull model");
+  }
+  return res.json();
+}
+
+export async function deleteOllamaModel(
+  model: string,
+  options?: ApiRequestOptions
+): Promise<OllamaDeleteResponse> {
+  const url = buildScopedUrl("/api/llm/ollama/delete", options);
+  const headers = buildHeaders(options);
+  
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ model }),
+  });
+  
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || error.message || "Failed to delete model");
+  }
+  return res.json();
+}
+
+export async function fetchOllamaHealth(options?: ApiRequestOptions): Promise<OllamaHealthResponse> {
+  return fetcher<OllamaHealthResponse>("/api/llm/ollama/health", options);
+}
+
+// Plan creation from chat message
+export interface CreatePlanRequest {
+  message: string;
+  task_description?: string;
+}
+
+export interface CreatePlanResponse {
+  task_id: string;
+  run_id: string;
+  plan?: string;
+  status: string;
+}
+
+export async function createPlanFromChat(
+  taskId: string,
+  request: CreatePlanRequest,
+  options?: ApiRequestOptions
+): Promise<CreatePlanResponse> {
+  // First, update task description if provided
+  if (request.task_description) {
+    const updateUrl = options
+      ? buildScopedUrl(`/api/tasks/${taskId}`, options)
+      : resolveUrl(`/api/tasks/${taskId}`);
+    const headers = buildHeaders(options);
+    
+    const updateRes = await fetch(updateUrl, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ description: request.task_description }),
+    });
+    
+    if (!updateRes.ok) {
+      const error = await updateRes.json().catch(() => ({}));
+      // Log warning but don't fail - task description update is optional
+      console.warn("Failed to update task description:", error.detail || error.message);
+    }
+  }
+
+  // Create a run which will trigger plan creation
+  const runUrl = options
+    ? buildScopedUrl(`/api/runs/`, options)
+    : resolveUrl(`/api/runs/`);
+  const headers = buildHeaders(options);
+  
+  const res = await fetch(runUrl, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      task_id: taskId,
+      // Run will be created and plan will be generated automatically
+    }),
+  });
+  
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.message || "Failed to create plan");
+  }
+  
+  const run = await res.json();
+  return {
+    task_id: taskId,
+    run_id: run.id,
+    plan: run.plan,
+    status: run.status,
+  };
 }
 
 export async function testLlmConnection(
@@ -1141,5 +1870,45 @@ export async function archiveResult(
   });
 
   if (!res.ok) throw new Error("Failed to archive result");
+  return res.json();
+}
+
+// Task Files API
+export interface TaskFile {
+  name: string;
+  path: string;
+  content: string;
+  type: "html" | "css" | "js" | "other";
+  size: number;
+  error?: string;
+}
+
+export interface TaskFilesResponse {
+  files: TaskFile[];
+  count: number;
+  task_id: string;
+  run_id?: string;
+}
+
+export async function getTaskFiles(
+  taskId: string,
+  runId?: string,
+  options?: ApiRequestOptions
+): Promise<TaskFilesResponse> {
+  const url = options
+    ? buildScopedUrl(`/api/tasks/${taskId}/files${runId ? `?run_id=${runId}` : ""}`, options)
+    : resolveUrl(`/api/tasks/${taskId}/files${runId ? `?run_id=${runId}` : ""}`);
+  const headers = buildHeaders(options);
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers,
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || error.message || "Failed to fetch task files");
+  }
+
   return res.json();
 }

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { createTask } from '@/lib/api';
+import { useWorkspace } from '@/lib/mgx/workspace/workspace-context';
 import { toast } from 'sonner';
 import { Loader2, X } from 'lucide-react';
 
@@ -15,6 +16,7 @@ export function CreateTaskModal({ isOpen, onClose, onTaskCreated }: CreateTaskMo
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { currentWorkspace, currentProject } = useWorkspace();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +28,10 @@ export function CreateTaskModal({ isOpen, onClose, onTaskCreated }: CreateTaskMo
 
     setIsLoading(true);
     try {
-      const task = await createTask(name, description || undefined);
+      const task = await createTask(name, description || undefined, {
+        workspaceId: currentWorkspace?.id,
+        projectId: currentProject?.id,
+      });
       toast.success('Task created successfully');
       setName('');
       setDescription('');

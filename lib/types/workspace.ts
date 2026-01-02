@@ -1,10 +1,14 @@
 export interface Workspace {
   id: string;
   name: string;
+  slug: string;
   description?: string;
+  metadata?: Record<string, any> | string; // Backend returns as "metadata" field
   createdAt: string;
   updatedAt: string;
-  userId: string;
+  created_at?: string; // Backend field name
+  updated_at?: string; // Backend field name
+  userId?: string;
   isActive?: boolean;
 }
 

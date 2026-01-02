@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle, Play, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,6 +29,7 @@ import type { RunProgressPayload, TaskPhase, TaskStatus, GitMetadata, AgentActiv
 import { cn } from "@/lib/utils";
 import { useRun, useTask } from "@/hooks/useTasks";
 import { useAgentForTask } from "@/hooks/useAgents";
+import { useWorkspace } from "@/lib/mgx/workspace/workspace-context";
 
 function pillVariant(status: TaskStatus) {
   switch (status) {
@@ -44,11 +46,12 @@ function pillVariant(status: TaskStatus) {
   }
 }
 
-type TabId = "plan" | "chat" | "progress" | "results" | "memory";
+type TabId = "plan" | "chat" | "history" | "progress" | "results" | "memory";
 
 const TAB_LABELS: Record<TabId, string> = {
   plan: "Plan",
   chat: "Live Chat",
+  history: "History",
   progress: "Progress",
   results: "Results",
   memory: "Memory",
@@ -90,9 +93,28 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
   const { run, isLoading: isRunLoading, mutate: mutateRun } = useRun(taskId, task?.currentRunId);
   const { agents, isLoading: isAgentsLoading, mutate: mutateAgents } = useAgentForTask(taskId, task?.currentRunId);
   const { lastMessage, subscribe } = useWebSocket();
+  const { currentWorkspace, currentProject } = useWorkspace();
+  const searchParams = useSearchParams();
 
-  const [activeTab, setActiveTab] = React.useState<TabId>("plan");
+  // Set initial tab from URL parameter
+  const initialTab = React.useMemo(() => {
+    const tabParam = searchParams?.get("tab");
+    if (tabParam && ["plan", "chat", "history", "progress", "results", "memory"].includes(tabParam)) {
+      return tabParam as TabId;
+    }
+    return "plan";
+  }, [searchParams]);
+
+  const [activeTab, setActiveTab] = React.useState<TabId>(initialTab);
   const [planModalOpen, setPlanModalOpen] = React.useState(false);
+
+  // Update tab when URL parameter changes
+  React.useEffect(() => {
+    const tabParam = searchParams?.get("tab");
+    if (tabParam && ["plan", "chat", "history", "progress", "results", "memory"].includes(tabParam)) {
+      setActiveTab(tabParam as TabId);
+    }
+  }, [searchParams]);
 
   const [livePhase, setLivePhase] = React.useState<TaskPhase | undefined>(undefined);
   const [liveProgress, setLiveProgress] = React.useState<number | undefined>(undefined);
@@ -101,6 +123,14 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
   const [liveLogs, setLiveLogs] = React.useState<string[]>([]);
   const [gitMetadata, setGitMetadata] = React.useState<GitMetadata | undefined>(undefined);
   const [agentActivityEvents, setAgentActivityEvents] = React.useState<AgentActivityEvent[]>([]);
+  const [formattedUpdatedAt, setFormattedUpdatedAt] = React.useState<string>("");
+
+  // Format date on client-side only to avoid hydration mismatch
+  React.useEffect(() => {
+    if (task?.updatedAt) {
+      setFormattedUpdatedAt(new Date(task.updatedAt).toLocaleString());
+    }
+  }, [task?.updatedAt]);
 
   React.useEffect(() => {
     subscribe?.({ taskId, runId: task?.currentRunId });
@@ -179,24 +209,50 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
 
   const handleTriggerRun = async () => {
     try {
-      await triggerRun(taskId);
+      await triggerRun(taskId, {
+        workspaceId: currentWorkspace?.id,
+        projectId: currentProject?.id,
+      });
       toast.success("Run triggered");
       mutateTask();
-    } catch {
-      toast.error("Failed to trigger run");
+      mutateRun();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to trigger run";
+      toast.error(errorMessage);
+      console.error("Failed to trigger run:", error);
     }
   };
 
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   if (isTaskLoading) {
+    // Always render the same structure to prevent hydration mismatch
     return (
-      <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-        <Spinner className="h-4 w-4" /> Loading task...
+      <div className="text-sm text-zinc-600 dark:text-zinc-400">
+        {isMounted ? (
+          <div className="flex items-center gap-2">
+            <Spinner className="h-4 w-4" />
+            <span>Loading task...</span>
+          </div>
+        ) : (
+          "Loading..."
+        )}
       </div>
     );
   }
 
   if (!task) {
-    return <div className="text-sm text-zinc-600 dark:text-zinc-400">Task not found.</div>;
+    // Only render on client-side to avoid hydration mismatch
+    // Always render the same structure to prevent hydration mismatch
+    return (
+      <div className="text-sm text-zinc-600 dark:text-zinc-400">
+        {isMounted ? "Task not found." : "Loading..."}
+      </div>
+    );
   }
 
   const effectiveLogs = [...(run?.logs ?? []), ...liveLogs];
@@ -211,7 +267,9 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">{task.name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-            <span className="tabular-nums">Updated {new Date(task.updatedAt).toLocaleString()}</span>
+            {formattedUpdatedAt && (
+              <span className="tabular-nums">Updated {formattedUpdatedAt}</span>
+            )}
             <StatusPill variant={pillVariant(task.status)}>{task.status}</StatusPill>
           </div>
           {gitMetadata && <GitMetadataBadge metadata={gitMetadata} className="mt-2" />}
@@ -306,7 +364,7 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
             ))}
           </div>
 
-          {!run ? (
+          {!run && activeTab !== "chat" ? (
             <div className="text-sm text-zinc-600 dark:text-zinc-400">
               No active run information available.
             </div>
@@ -328,9 +386,9 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
             </div>
           ) : null}
 
-          {run && activeTab === "chat" ? (
+          {activeTab === "chat" ? (
              <div className="h-[600px] rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950">
-               <TaskLiveChat taskId={taskId} runId={run.id} className="h-full" />
+               <TaskLiveChat taskId={taskId} runId={run?.id} className="h-full" />
              </div>
           ) : null}
 
@@ -352,6 +410,17 @@ export function TaskMonitoringView({ taskId }: { taskId: string }) {
 
           {run && activeTab === "results" ? (
             <ResultsViewer artifacts={run.artifacts} taskId={taskId} runId={run.id} />
+          ) : null}
+
+          {run && activeTab === "history" ? (
+            <div className="space-y-4">
+              <div className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                Chat History
+              </div>
+              <div className="h-[600px] rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 overflow-hidden">
+                <TaskLiveChat taskId={taskId} runId={run.id} className="h-full" />
+              </div>
+            </div>
           ) : null}
 
           {run && activeTab === "memory" ? (

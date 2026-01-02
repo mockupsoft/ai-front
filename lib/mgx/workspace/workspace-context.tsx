@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import useSWR from "swr";
 
 import { fetchWorkspaceWorkspaces } from "@/lib/api";
 import type { Workspace, Project, WorkspaceContextType, WorkspaceContextState, WorkspaceError, WorkspaceHealth } from "@/lib/types/workspace";
@@ -51,11 +52,12 @@ interface WorkspaceProviderProps {
 }
 
 export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
-  const [state, setState] = useState<WorkspaceContextState>(defaultState);
-
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  
+  // Track if we've initialized workspace/project selection
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Get initial selection from URL params or localStorage
   const getInitialSelection = useCallback(() => {
@@ -72,6 +74,83 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       workspaceId: urlWorkspaceId || storedWorkspaceId,
     };
   }, [searchParams]);
+
+  // SWR configuration
+  const swrConfig = useMemo(() => ({
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    shouldRetryOnError: true,
+    errorRetryCount: 5,
+    errorRetryInterval: 2000,
+    dedupingInterval: 2000,
+    refreshInterval: 0,
+  }), []);
+
+  // Backend health check fetcher
+  const healthFetcher = useCallback(async (): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE}/health`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Backend health check with SWR - more aggressive retry
+  const { data: isBackendHealthy, error: healthError } = useSWR<boolean>(
+    'backend-health',
+    healthFetcher,
+    {
+      ...swrConfig,
+      refreshInterval: 5000, // Check every 5 seconds
+      errorRetryCount: 10, // More retries for health check
+      errorRetryInterval: 1000, // Faster retry for health check
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    }
+  );
+
+  // Workspaces fetcher for SWR
+  const workspacesFetcher = useCallback(async (): Promise<Workspace[]> => {
+    const startTime = Date.now();
+    const workspaces = await fetchWorkspaceWorkspaces();
+    const apiLatency = Date.now() - startTime;
+    
+    // Save to localStorage for offline fallback
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mgx-workspaces-cache', JSON.stringify({
+        workspaces,
+        timestamp: new Date().toISOString(),
+      }));
+    }
+
+    return workspaces;
+  }, []);
+
+  // Projects fetcher for SWR
+  const projectsFetcher = useCallback(async (key: string, workspaceId: string): Promise<Project[]> => {
+    if (!workspaceId) return [];
+    
+    const url = resolveUrl('/api/projects/'); // Added trailing slash to avoid 307 redirect CORS issue
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Workspace-Id': workspaceId,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch projects: ${response.status}`);
+    }
+    
+    const data = await response.json() as { items: Project[]; total: number; skip: number; limit: number };
+    return data.items || [];
+  }, []);
 
   // Enhanced error classification
   const classifyError = useCallback((error: unknown): WorkspaceError => {
@@ -104,116 +183,133 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     return enhancedError;
   }, []);
 
-  // Fetch workspaces with enhanced error handling
-  const fetchWorkspaces = useCallback(async () => {
-    setState((prev) => ({ ...prev, isLoadingWorkspaces: true, error: null }));
-    
-    try {
-      const startTime = Date.now();
-      const workspaces = await fetchWorkspaceWorkspaces();
-      const apiLatency = Date.now() - startTime;
-      
-      // Update health status on success
-      const health: WorkspaceHealth = {
-        workspaceId: 'global', // Global workspace health
-        status: apiLatency > 5000 ? 'degraded' : 'healthy', // Degraded if slow
-        lastChecked: new Date(),
-        apiLatency,
-      };
-      
-      setState((prev) => ({
-        ...prev,
-        workspaces,
-        health,
-        isLoadingWorkspaces: false,
-        error: null,
-      }));
-
-      // Save to localStorage for offline fallback
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('mgx-workspaces-cache', JSON.stringify({
-          workspaces,
-          timestamp: new Date().toISOString(),
-        }));
-      }
-
-      return workspaces;
-    } catch (err) {
-      console.error('Failed to fetch workspaces:', err);
-      const classifiedError = classifyError(err);
-      
-      setState((prev) => ({
-        ...prev,
-        error: classifiedError,
-        isLoadingWorkspaces: false,
-        health: {
-          workspaceId: 'global',
-          status: 'offline',
-          lastChecked: new Date(),
-        },
-      }));
-      
-      // Try offline fallback
-      if (typeof window !== 'undefined') {
-        const cached = localStorage.getItem('mgx-workspaces-cache');
-        if (cached) {
-          try {
-            const { workspaces } = JSON.parse(cached);
-            setState((prev) => ({
-              ...prev,
-              workspaces,
-              error: classifiedError, // Keep error but show cached data
-            }));
-            return workspaces;
-          } catch {
-            // Ignore parse errors
-          }
-        }
-      }
-      return [];
-    }
-  }, [classifyError]);
-
-  // Fetch projects for a workspace
-  const fetchProjects = useCallback(async (workspaceId: string) => {
-    if (!workspaceId) {
-      setState((prev) => ({ ...prev, projects: [], isLoadingProjects: false }));
-      return [];
-    }
-
-    setState((prev) => ({ ...prev, isLoadingProjects: true, error: null }));
-    
-    try {
-      const response = await fetch(resolveUrl(`/projects?workspace_id=${workspaceId}`), {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch projects: ${response.status}`);
-      }
-      
-      const projects = await response.json() as Project[];
-      
-      setState((prev) => ({
-        ...prev,
-        projects,
-        isLoadingProjects: false,
-      }));
-
-      return projects;
-    } catch (error) {
-      console.error("Failed to fetch projects:", error);
-      setState((prev) => ({
-        ...prev,
-        error: error as Error,
-        isLoadingProjects: false,
-      }));
-      return [];
+  // Always try to fetch workspaces - SWR will handle retries
+  // Optimized retry strategy for backend connectivity
+  // Debug: Log when SWR is called
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      console.log('[WorkspaceContext] SWR will fetch workspaces with key: workspaces');
     }
   }, []);
+  
+  const { 
+    data: workspaces = [], 
+    error: workspacesError, 
+    isLoading: isLoadingWorkspaces,
+    mutate: mutateWorkspaces 
+  } = useSWR<Workspace[]>(
+    'workspaces', // Always try to fetch
+    workspacesFetcher,
+    {
+      ...swrConfig,
+      errorRetryCount: 10, // Reasonable retry count
+      errorRetryInterval: 2000, // 2 second intervals
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      dedupingInterval: 5000, // Prevent duplicate requests
+      onErrorRetry: (error, key, config, revalidate, { retryCount }) => {
+        // Only retry network/fetch errors - don't retry on 4xx/5xx errors
+        const isNetworkError = error.message.includes('fetch') || 
+                              error.message.includes('Network') || 
+                              error.message.includes('Failed to fetch') ||
+                              error.message.includes('timeout') ||
+                              error.message.includes('Cannot connect');
+        
+        if (isNetworkError && retryCount < 10) {
+          // Exponential backoff: 1s, 2s, 4s, 8s, etc. (max 10s)
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+          setTimeout(() => revalidate({ retryCount }), delay);
+        }
+        // Don't retry on other errors (4xx, 5xx, etc.)
+      },
+      fallbackData: (() => {
+        // Try to load from cache on initial load
+        if (typeof window !== 'undefined') {
+          const cached = localStorage.getItem('mgx-workspaces-cache');
+          if (cached) {
+            try {
+              const { workspaces, timestamp } = JSON.parse(cached);
+              // Only use cache if it's less than 5 minutes old
+              const cacheAge = Date.now() - new Date(timestamp).getTime();
+              if (cacheAge < 5 * 60 * 1000) {
+                return workspaces;
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+        return undefined;
+      })(),
+    }
+  );
+
+  // Get current workspace ID
+  const { workspaceId: currentWorkspaceId } = getInitialSelection();
+  
+  // Use SWR for projects - fetch if workspace is selected, SWR will handle retries
+  const { 
+    data: projects = [], 
+    error: projectsError, 
+    isLoading: isLoadingProjects,
+    mutate: mutateProjects 
+  } = useSWR<Project[]>(
+    currentWorkspaceId ? ['projects', currentWorkspaceId] : null,
+    ([, workspaceId]: [string, string]) => projectsFetcher('projects', workspaceId),
+    {
+      ...swrConfig,
+      errorRetryCount: 8, // More retries
+      errorRetryInterval: 1500,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    }
+  );
+
+  // Calculate health status from workspaces fetch
+  const health: WorkspaceHealth | null = useMemo(() => {
+    if (workspacesError) {
+      return {
+        workspaceId: 'global',
+        status: 'offline',
+        lastChecked: new Date(),
+      };
+    }
+    if (workspaces.length > 0) {
+      return {
+        workspaceId: 'global',
+        status: 'healthy',
+        lastChecked: new Date(),
+      };
+    }
+    return null;
+  }, [workspaces, workspacesError]);
+
+  // Classify error from SWR
+  const error: WorkspaceError | null = useMemo(() => {
+    if (workspacesError) {
+      return classifyError(workspacesError);
+    }
+    if (projectsError) {
+      return classifyError(projectsError);
+    }
+    return null;
+  }, [workspacesError, projectsError, classifyError]);
+
+  // Get current workspace and project from workspaces/projects data
+  const currentWorkspace = useMemo(() => {
+    if (!currentWorkspaceId || !workspaces.length) return null;
+    return workspaces.find(w => w.id === currentWorkspaceId) || workspaces[0] || null;
+  }, [currentWorkspaceId, workspaces]);
+
+  const currentProject = useMemo(() => {
+    if (!currentWorkspace || !projects.length) return null;
+    const projectId = searchParams?.get(PROJECT_PARAM) || 
+                     (typeof window !== 'undefined' ? localStorage.getItem(PROJECT_STORAGE_KEY) : null);
+    if (projectId) {
+      return projects.find(p => p.id === projectId) || null;
+    }
+    return projects[0] || null;
+  }, [currentWorkspace, projects, searchParams]);
 
   // Select workspace
   const selectWorkspace = useCallback(async (workspace: Workspace) => {
@@ -239,22 +335,13 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       }));
     }
 
-    // Update state
-    setState((prev) => ({
-      ...prev,
-      currentWorkspace: workspace,
-      currentProject: null,
-      projects: [],
-    }));
-
-    // Fetch projects for new workspace
-    await fetchProjects(workspace.id);
-
     // Update URL (only if router is available)
     if (router) {
       router.push(`${pathname}?${newSearchParams.toString()}`, { scroll: false });
     }
-  }, [router, pathname, searchParams, fetchProjects]);
+
+    // SWR will automatically refetch projects when workspaceId changes
+  }, [router, pathname, searchParams]);
 
   // Select project
   const selectProject = useCallback(async (project: Project) => {
@@ -269,120 +356,123 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       localStorage.setItem(PROJECT_STORAGE_KEY, project.id);
     }
 
-    // Update state
-    setState((prev) => ({
-      ...prev,
-      currentProject: project,
-    }));
-
     // Update URL (only if router is available)
     if (router) {
       router.push(`${pathname}?${newSearchParams.toString()}`, { scroll: false });
     }
   }, [router, pathname, searchParams]);
 
-  // Refresh workspaces
+  // Refresh workspaces using SWR mutate
   const refreshWorkspaces = useCallback(async () => {
-    await fetchWorkspaces();
+    await mutateWorkspaces();
     
     // If current workspace is no longer available, clear it
     const { workspaceId } = getInitialSelection();
-    if (workspaceId && !state.workspaces.find(w => w.id === workspaceId)) {
+    if (workspaceId && !workspaces.find(w => w.id === workspaceId)) {
       if (typeof window !== 'undefined') {
         localStorage.removeItem(WORKSPACE_STORAGE_KEY);
         localStorage.removeItem(PROJECT_STORAGE_KEY);
       }
-      setState((prev) => ({
-        ...prev,
-        currentWorkspace: null,
-        currentProject: null,
-      }));
     }
-  }, [fetchWorkspaces, getInitialSelection, state.workspaces]);
+  }, [mutateWorkspaces, getInitialSelection, workspaces]);
 
-  // Refresh projects
+  // Refresh projects using SWR mutate
   const refreshProjects = useCallback(async () => {
-    if (state.currentWorkspace) {
-      await fetchProjects(state.currentWorkspace.id);
+    if (currentWorkspaceId) {
+      await mutateProjects();
     }
-  }, [fetchProjects, state.currentWorkspace]);
+  }, [mutateProjects, currentWorkspaceId]);
 
   // App-wide data refresh when workspace changes
   const refreshWorkspaceData = useCallback(async () => {
     // Reload all workspace-related data
-    if (state.currentWorkspace) {
-      await Promise.all([
-        fetchProjects(state.currentWorkspace.id),
-        refreshWorkspaces(),
-      ]);
-      
-      // Trigger custom event for other components to refresh
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('workspaceRefresh', {
-          detail: { workspaceId: state.currentWorkspace.id },
-        }));
-      }
+    await Promise.all([
+      mutateWorkspaces(),
+      currentWorkspaceId && mutateProjects(),
+    ]);
+    
+    // Trigger custom event for other components to refresh
+    if (typeof window !== 'undefined' && currentWorkspaceId) {
+      window.dispatchEvent(new CustomEvent('workspaceRefresh', {
+        detail: { workspaceId: currentWorkspaceId },
+      }));
     }
-  }, [state.currentWorkspace, fetchProjects, refreshWorkspaces]);
+  }, [currentWorkspaceId, mutateWorkspaces, mutateProjects]);
 
   // Get workspace health status
   const getWorkspaceHealth = useCallback((workspaceId?: string): WorkspaceHealth | null => {
-    if (!workspaceId && !state.currentWorkspace) {
-      return state.health;
-    }
-    
-    const targetId = workspaceId || state.currentWorkspace?.id;
-    if (!targetId) return null;
-    
-    return state.health; // For now, return global health status
-  }, [state.health, state.currentWorkspace]);
+    return health;
+  }, [health]);
 
-  // Initialize context
+  // Auto-select workspace and project when data is available (only once on initial load)
   useEffect(() => {
-    const initializeContext = async () => {
-      const { workspaceId } = getInitialSelection();
+    if (hasInitialized || !workspaces.length) return;
+    
+    const { workspaceId } = getInitialSelection();
+    const workspace = workspaceId 
+      ? workspaces.find(w => w.id === workspaceId) || workspaces[0]
+      : workspaces[0];
+    
+    if (workspace) {
+      // Update URL and localStorage without triggering re-fetch
+      const newSearchParams = searchParams 
+        ? new URLSearchParams(searchParams.toString())
+        : new URLSearchParams();
+      newSearchParams.set(WORKSPACE_PARAM, workspace.id);
       
-      // Fetch workspaces
-      const workspaces = await fetchWorkspaces();
-      
-      // Set current workspace if found
-      if (workspaceId && workspaces.length > 0) {
-        const workspace = workspaces.find((w: Workspace) => w.id === workspaceId) || workspaces[0];
-        setState((prev) => ({ ...prev, currentWorkspace: workspace }));
-        
-        // Fetch projects for the workspace
-        const projects = await fetchProjects(workspace.id);
-        
-        // Auto-select first project if available
-        if (projects.length > 0) {
-          setState((prev) => ({ ...prev, currentProject: projects[0] }));
-        }
-      } else if (workspaces.length > 0) {
-        // Auto-select first workspace if none selected
-        const workspace = workspaces[0];
-        setState((prev) => ({ ...prev, currentWorkspace: workspace }));
-        
-        // Fetch projects for the workspace
-        const projects = await fetchProjects(workspace.id);
-        
-        // Auto-select first project if available
-        if (projects.length > 0) {
-          setState((prev) => ({ ...prev, currentProject: projects[0] }));
-        }
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(WORKSPACE_STORAGE_KEY, workspace.id);
       }
-    };
+      
+      if (router) {
+        router.push(`${pathname}?${newSearchParams.toString()}`, { scroll: false });
+      }
+      
+      setHasInitialized(true);
+    }
+  }, [hasInitialized, workspaces, getInitialSelection, searchParams, router, pathname]);
 
-    initializeContext();
-  }, [getInitialSelection, fetchWorkspaces, fetchProjects]);
+  // Auto-select project when workspace is selected and projects are available
+  useEffect(() => {
+    if (!currentWorkspace || currentProject || !projects.length) return;
+    
+    const projectId = searchParams?.get(PROJECT_PARAM) || 
+                     (typeof window !== 'undefined' ? localStorage.getItem(PROJECT_STORAGE_KEY) : null);
+    const project = projectId 
+      ? projects.find(p => p.id === projectId) || projects[0]
+      : projects[0];
+    
+    if (project) {
+      const newSearchParams = searchParams
+        ? new URLSearchParams(searchParams.toString())
+        : new URLSearchParams();
+      newSearchParams.set(PROJECT_PARAM, project.id);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(PROJECT_STORAGE_KEY, project.id);
+      }
+      
+      if (router) {
+        router.push(`${pathname}?${newSearchParams.toString()}`, { scroll: false });
+      }
+    }
+  }, [currentWorkspace, currentProject, projects, searchParams, router, pathname]);
 
   const value: WorkspaceContextType = {
-    ...state,
+    currentWorkspace,
+    currentProject,
+    workspaces,
+    projects,
+    isLoadingWorkspaces,
+    isLoadingProjects,
+    error,
     selectWorkspace,
     selectProject,
     refreshWorkspaces,
     refreshProjects,
     refreshWorkspaceData,
     getWorkspaceHealth,
+    health,
   };
 
   return (
@@ -407,6 +497,8 @@ export function useWorkspace(): WorkspaceContextType {
         refreshProjects: async () => {},
         refreshWorkspaceData: async () => {},
         getWorkspaceHealth: () => null,
+        error: null,
+        health: null,
       };
     }
     throw new Error("useWorkspace must be used within a WorkspaceProvider");

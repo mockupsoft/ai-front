@@ -29,7 +29,7 @@ export function MgxHeader() {
   const envInfo = getEnvironmentInfo();
 
   return (
-    <header className="sticky top-0 z-10 border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/70">
+    <header className="sticky top-0 z-10 shrink-0 border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/70">
       <div className="flex h-14 items-center justify-between gap-4 px-6">
         <div className="flex flex-1 items-center gap-3">
           <div className="relative w-full max-w-md">

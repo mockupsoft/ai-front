@@ -14,9 +14,11 @@ function isActive(pathname: string, href: string) {
 export function MgxSidebarNav({
   className,
   variant = "vertical",
+  collapsed = false,
 }: {
   className?: string;
   variant?: "vertical" | "horizontal";
+  collapsed?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -56,6 +58,44 @@ export function MgxSidebarNav({
     );
   }
 
+  // Collapsed vertical nav - only icons
+  if (collapsed) {
+    return (
+      <nav className={cn("space-y-2", className)} aria-label="MGX">
+        {navigationConfig.map((group, groupIndex) => (
+          <div key={groupIndex} className="space-y-1">
+            {group.items.map((item) => {
+              const active = isActive(pathname, item.href);
+              const Icon = item.icon;
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  title={item.label}
+                  className={cn(
+                    "flex items-center justify-center rounded-md p-2",
+                    "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-300",
+                    active &&
+                      "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50",
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                  {item.badge && (
+                    <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-zinc-900 dark:bg-zinc-100 text-[10px] font-medium text-white dark:text-zinc-900 flex items-center justify-center">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+    );
+  }
+
+  // Expanded vertical nav
   return (
     <nav className={cn("space-y-4", className)} aria-label="MGX">
       {navigationConfig.map((group, groupIndex) => (

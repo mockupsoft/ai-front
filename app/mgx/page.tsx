@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 import {
   Card,
@@ -15,7 +16,16 @@ import { useAgents } from "@/hooks/useAgents";
 import { Spinner } from "@/components/mgx/ui/spinner";
 
 export default function MgxOverviewPage() {
+  const [isMounted, setIsMounted] = useState(false);
   const { agents, counts, isLoading: isAgentsLoading } = useAgents();
+
+  // Prevent hydration mismatch by waiting for client mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Show loading state until client is mounted to prevent hydration mismatch
+  const showLoading = !isMounted || isAgentsLoading;
 
   return (
     <div className="space-y-6">
@@ -95,7 +105,7 @@ export default function MgxOverviewPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {isAgentsLoading ? (
+            {showLoading ? (
               <div className="flex items-center justify-center py-2">
                 <Spinner className="h-6 w-6" />
               </div>
@@ -116,7 +126,7 @@ export default function MgxOverviewPage() {
         idleCount={counts.idle}
         errorCount={counts.error}
         totalCount={counts.total}
-        isLoading={isAgentsLoading}
+        isLoading={showLoading}
       />
 
       <Card>
@@ -129,7 +139,7 @@ export default function MgxOverviewPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isAgentsLoading ? (
+          {showLoading ? (
             <div className="flex items-center justify-center py-8">
               <Spinner className="h-5 w-5" />
             </div>

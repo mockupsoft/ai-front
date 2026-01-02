@@ -32,6 +32,20 @@ export const AgentActivityTimeline = React.forwardRef<
   AgentActivityTimelineProps
 >(({ events = [], isLoading = false, maxItems = 10, className, ...props }, ref) => {
   const displayEvents = events.slice(0, maxItems);
+  const [formattedTimes, setFormattedTimes] = React.useState<Record<string, string>>({});
+
+  // Format timestamps on client-side only to avoid hydration mismatch
+  React.useEffect(() => {
+    const formatted: Record<string, string> = {};
+    displayEvents.forEach((event) => {
+      try {
+        formatted[event.id] = new Date(event.timestamp).toLocaleTimeString();
+      } catch {
+        formatted[event.id] = "";
+      }
+    });
+    setFormattedTimes(formatted);
+  }, [displayEvents]);
 
   if (isLoading) {
     return (
@@ -87,9 +101,23 @@ export const AgentActivityTimeline = React.forwardRef<
                 <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
                   {event.description}
                 </p>
+                {/* Show agent coordination info if available */}
+                {(event.data?.sender_agent_id || event.data?.recipient_agent_id || event.data?.llm_provider) && (
+                  <div className="mt-1 flex flex-wrap gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                    {event.data?.sender_agent_id && (
+                      <span className="font-mono">From: {event.data.sender_agent_id.substring(0, 8)}...</span>
+                    )}
+                    {event.data?.recipient_agent_id && (
+                      <span className="font-mono">To: {event.data.recipient_agent_id.substring(0, 8)}...</span>
+                    )}
+                    {event.data?.llm_provider && (
+                      <span className="font-mono">LLM: {event.data.llm_provider}{event.data?.llm_model ? `/${event.data.llm_model}` : ""}</span>
+                    )}
+                  </div>
+                )}
               </div>
               <span className="text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap flex-shrink-0">
-                {new Date(event.timestamp).toLocaleTimeString()}
+                {formattedTimes[event.id] || "Loading..."}
               </span>
             </div>
           </div>

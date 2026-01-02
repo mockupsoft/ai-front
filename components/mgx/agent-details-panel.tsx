@@ -71,6 +71,19 @@ export const AgentDetailsPanel = React.forwardRef<
     { revalidateOnFocus: false }
   );
 
+  // Format timestamps on client-side only to avoid hydration mismatch
+  const [formattedTimestamps, setFormattedTimestamps] = React.useState<Record<number, string>>({});
+  
+  React.useEffect(() => {
+    if (contextHistory && contextHistory.length > 0) {
+      const formatted: Record<number, string> = {};
+      contextHistory.forEach((version) => {
+        formatted[version.version] = new Date(version.timestamp).toLocaleString();
+      });
+      setFormattedTimestamps(formatted);
+    }
+  }, [contextHistory]);
+
   const handleSaveConfig = async () => {
     if (onEdit) {
       await onEdit(editConfig);
@@ -303,8 +316,11 @@ export const AgentDetailsPanel = React.forwardRef<
             <div className="space-y-4">
               <LlmProviderSelector
                 selectedProvider={llmConfig.provider}
+                selectedModel={llmConfig.model}
                 onProviderSelect={handleLlmProviderChange}
+                onModelSelect={handleLlmModelChange}
                 disabled={false}
+                apiOptions={apiOptions}
               />
               
               <ModelSelector
@@ -421,7 +437,7 @@ export const AgentDetailsPanel = React.forwardRef<
                         Version {version.version}
                       </p>
                       <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                        {new Date(version.timestamp).toLocaleString()}
+                        {formattedTimestamps[version.version] || "Loading..."}
                       </p>
                     </div>
                     <Button

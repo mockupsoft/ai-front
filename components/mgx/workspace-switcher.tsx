@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { 
   Building2, 
   ChevronDown, 
   ChevronUp, 
   Plus, 
   Search, 
-  Wifi, 
   WifiOff, 
   AlertTriangle, 
   RefreshCw, 
@@ -21,52 +21,17 @@ import { Button } from "@/components/mgx/ui/button";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
 import type { Workspace, WorkspaceHealth, WorkspaceError } from "@/lib/types/workspace";
 
+// Dynamically import HealthIndicator to prevent SSR
+const HealthIndicator = dynamic(
+  () => import("@/components/mgx/health-indicator"),
+  { ssr: false }
+);
+
 interface WorkspaceSwitcherProps {
   className?: string;
   showCreateButton?: boolean;
   enableSearch?: boolean;
   enableHealthCheck?: boolean;
-}
-
-interface HealthIndicatorProps {
-  health: WorkspaceHealth | null;
-  size?: "sm" | "md" | "lg";
-}
-
-function HealthIndicator({ health, size = "sm" }: HealthIndicatorProps) {
-  if (!health) return null;
-
-  const sizeClasses = {
-    sm: "h-2 w-2",
-    md: "h-3 w-3",
-    lg: "h-4 w-4",
-  };
-
-  const statusColors = {
-    healthy: "bg-green-500 text-green-500",
-    degraded: "bg-yellow-500 text-yellow-500",
-    offline: "bg-red-500 text-red-500",
-  };
-
-  const wsStatusColors = {
-    connected: "text-green-500",
-    disconnected: "text-red-500",
-    connecting: "text-yellow-500 animate-pulse",
-  };
-
-  return (
-    <div className="flex items-center gap-1">
-      <div 
-        className={`${sizeClasses[size]} rounded-full ${statusColors[health.status]} animate-pulse`} 
-        title={`API Status: ${health.status}`}
-      />
-      {health.wsStatus && (
-        <span title={`WS Status: ${health.wsStatus}`}>
-          <Wifi className={`h-3 w-3 ${wsStatusColors[health.wsStatus]}`} />
-        </span>
-      )}
-    </div>
-  );
 }
 
 interface ErrorDetailsProps {
@@ -126,6 +91,7 @@ export function WorkspaceSwitcher({
   const [isOpen, setIsOpen] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingWorkspace, setPendingWorkspace] = useState<Workspace | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -146,6 +112,11 @@ export function WorkspaceSwitcher({
     searchTerm: "",
     enableHealthCheck,
   });
+
+  // Only render client-side specific content after mount to avoid hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -238,11 +209,15 @@ export function WorkspaceSwitcher({
               "No workspace"
             )}
           </span>
-          {enableHealthCheck && health && (
+          {isMounted && enableHealthCheck && health && (
             <HealthIndicator health={health} size="sm" />
           )}
-          {isOpen ? (
-            <ChevronUp className="h-3 w-3 flex-shrink-0" />
+          {isMounted ? (
+            isOpen ? (
+              <ChevronUp className="h-3 w-3 flex-shrink-0" />
+            ) : (
+              <ChevronDown className="h-3 w-3 flex-shrink-0" />
+            )
           ) : (
             <ChevronDown className="h-3 w-3 flex-shrink-0" />
           )}
@@ -351,7 +326,7 @@ export function WorkspaceSwitcher({
                             <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
                               {workspace.name}
                             </span>
-                            <HealthIndicator health={health} size="sm" />
+                            {isMounted && <HealthIndicator health={health} size="sm" />}
                           </div>
                           {workspace.description && (
                             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
@@ -381,7 +356,7 @@ export function WorkspaceSwitcher({
                     <span className="text-amber-600 dark:text-amber-400">Offline mode</span>
                   ) : health ? (
                     <span className="flex items-center gap-1">
-                      <HealthIndicator health={health} size="sm" />
+                      {isMounted && <HealthIndicator health={health} size="sm" />}
                       API: {health.apiLatency ? `${health.apiLatency}ms` : 'N/A'}
                     </span>
                   ) : (

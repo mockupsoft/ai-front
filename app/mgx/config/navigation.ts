@@ -8,6 +8,7 @@ import {
   Settings,
   Trophy,
   Workflow,
+  Brain,
 } from "lucide-react";
 
 export type NavItem = {
@@ -74,6 +75,11 @@ export const navigationConfig: NavGroup[] = [
         href: "/mgx/settings",
         label: "Settings",
         icon: Settings,
+      },
+      {
+        href: "/mgx/settings/llm",
+        label: "LLM Management",
+        icon: Brain,
       },
     ],
   },

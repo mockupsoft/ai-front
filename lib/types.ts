@@ -105,6 +105,13 @@ export interface AgentMessage {
   timestamp: number;
   actionType?: "thinking" | "executing" | "completed" | "error";
   payload?: Record<string, any>; // Backend payload desteği
+  // Agent coordination metadata (from payload)
+  sender_agent_id?: string;
+  recipient_agent_id?: string;
+  llm_provider?: string;
+  llm_model?: string;
+  // Include created_at as a fallback for timestamp parsing
+  created_at?: string;
 }
 
 export interface TaskRun {

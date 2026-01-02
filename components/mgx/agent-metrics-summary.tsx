@@ -52,6 +52,7 @@ export const AgentMetricsSummary = React.forwardRef<
       errorCount = 0,
       totalCount = 0,
       compact = false,
+      isLoading,
       className,
       ...props
     },
