@@ -8,8 +8,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from 'next-themes';
 import { Button } from '@/components/mgx/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/mgx/ui/card';
-import Navigation from '@/components/Navigation';
-import Sidebar from '@/components/mgx/sidebar';
+import { Navigation } from '@/components/Navigation';
+import { MgxSidebar as Sidebar } from '@/components/mgx/sidebar';
 
 // Mock next-themes for testing
 const mockUseTheme = jest.fn();

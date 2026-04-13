@@ -88,7 +88,7 @@ export function TaskSplitView({ taskId, runId, className }: TaskSplitViewProps) 
       });
       
       // CRITICAL: Verify response is for the current taskId (prevent stale data)
-      const responseTaskId = response.task_id || response.taskId;
+      const responseTaskId = response.task_id;
       if (responseTaskId && responseTaskId !== currentTaskId) {
         if (isDev) {
           console.warn("[TaskSplitView] Rejecting files from different task:", {
@@ -197,7 +197,7 @@ export function TaskSplitView({ taskId, runId, className }: TaskSplitViewProps) 
   React.useEffect(() => {
     if (!lastMessage) return;
 
-    if (lastMessage.type === "files_updated") {
+    if ((lastMessage as { type: string }).type === "files_updated") {
       const payload = lastMessage.payload as any;
       const eventTaskId = payload.taskId || payload.task_id;
       const eventRunId = payload.runId || payload.run_id;
@@ -382,7 +382,9 @@ export function TaskSplitView({ taskId, runId, className }: TaskSplitViewProps) 
       <SplitPanelLayout
         leftPanel={
           <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', overflow: 'hidden', backgroundColor: '#18181b', minHeight: 0, maxHeight: '100%' }}>
-            <TaskLiveChat taskId={taskId} runId={runId} className="flex-1 min-h-0" style={{ height: '100%', minHeight: 0, maxHeight: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} />
+            <div style={{ height: '100%', minHeight: 0, maxHeight: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1 }}>
+              <TaskLiveChat taskId={taskId} runId={runId} className="flex-1 min-h-0" />
+            </div>
           </div>
         }
         rightPanel={renderRightPanel()}

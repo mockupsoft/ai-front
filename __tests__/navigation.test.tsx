@@ -8,9 +8,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'next-themes';
 import Link from 'next/link';
-import Navigation from '@/components/Navigation';
-import Sidebar from '@/components/mgx/sidebar';
-import Breadcrumb from '@/components/mgx/breadcrumb';
+import { Navigation } from '@/components/Navigation';
+import { MgxSidebar as Sidebar } from '@/components/mgx/sidebar';
+import { MgxBreadcrumb as Breadcrumb } from '@/components/mgx/breadcrumb';
 
 // Mock components
 jest.mock('@/components/Navigation', () => {

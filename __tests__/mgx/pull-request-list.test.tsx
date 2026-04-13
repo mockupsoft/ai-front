@@ -30,7 +30,7 @@ describe("PullRequestList", () => {
         number: 1,
         title: "Test PR",
         body: "Test body",
-        state: "open",
+        state: "open" as const,
         head_branch: "feature/test",
         base_branch: "main",
         head_sha: "abc123",

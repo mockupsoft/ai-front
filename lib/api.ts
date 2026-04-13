@@ -1,7 +1,8 @@
 import { MGX_API_BASE_URL } from "@/lib/mgx/env";
 import type { 
   AgentDefinition, 
-  AgentInstance, 
+  AgentInstance,
+  AgentMessage,
   LlmProvider, 
   LlmModel,
   LlmConnectionTestResult,

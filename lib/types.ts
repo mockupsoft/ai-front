@@ -325,6 +325,13 @@ export interface AgentActivityEvent {
   description: string;
   timestamp: number;
   metadata?: Record<string, unknown>;
+  /** Optional coordination payload (LLM / multi-agent). */
+  data?: {
+    sender_agent_id?: string;
+    recipient_agent_id?: string;
+    llm_provider?: string;
+    llm_model?: string;
+  };
 }
 
 export interface AgentContextSnapshot {

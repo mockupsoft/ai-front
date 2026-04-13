@@ -44,7 +44,7 @@ export function TerminalPanel({ taskId, runId, className }: TerminalPanelProps) 
     // Handle different event types
     let logEntry: LogEntry | null = null;
 
-    switch (lastMessage.type) {
+    switch (lastMessage.type as string) {
       case "analysis_start":
         logEntry = {
           timestamp: new Date(),

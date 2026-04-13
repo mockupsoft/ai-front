@@ -28,12 +28,6 @@ A modern, production-ready admin dashboard built with Next.js 15, React 19, and 
 - ✅ **Template Library UI** - Pre-built workflow templates and patterns
 - ✅ **Comprehensive Testing** - Unit, integration, and E2E tests (Jest, Testing Library, Playwright)
 - ✅ **Next.js 15 & React 19 Compatible** - Latest framework versions with TypeScript support
-- ✅ **Intelligent Chat Interface** - Real-time chat with simple question detection, plan preview, and auto-approval
-- ✅ **Split View Layout** - Chat, code editor, and live preview in a single interface
-- ✅ **Plan Preview & Approval** - Interactive plan review with checklist, commands, and outputs
-- ✅ **Memory Pinning** - Pin important messages to agent memory for context retention
-- ✅ **Code Editor Integration** - Monaco editor with syntax highlighting and file tree navigation
-- ✅ **Live Preview** - Real-time HTML/CSS/JS preview with iframe sandboxing
 
 ## 🛠 Technology Stack
 
@@ -171,27 +165,6 @@ Connect GitHub repositories, display branch/commit/PR metadata as badges, and tr
 
 ### Template Library UI
 Pre-built workflow templates for common patterns including data processing, CI/CD pipelines, and agent orchestration workflows.
-
-### Intelligent Chat Interface
-Real-time chat interface with intelligent question detection. Simple questions receive direct responses, while complex tasks trigger plan generation with interactive preview. Features include:
-- Real-time message streaming via WebSocket
-- Plan preview with checklist, commands, and outputs
-- Auto-approval for simple tasks
-- Manual approval for complex projects
-- Message pinning to agent memory
-- Typing indicators and agent status
-- Infinite scroll for message history
-
-### Split View Layout
-Professional development interface combining chat, code editor, and live preview:
-- **Left Panel**: Real-time chat with agent messages
-- **Right Panel**: Tabbed interface with:
-  - **App Viewer**: Live HTML/CSS/JS preview
-  - **Code Editor**: Monaco editor with syntax highlighting
-  - **Terminal**: Integrated terminal panel
-  - **File Tree**: Project file navigation
-- Resizable panels with split-panel layout
-- Auto-sync between chat, code, and preview
 
 ## 🧪 Testing & Quality
 

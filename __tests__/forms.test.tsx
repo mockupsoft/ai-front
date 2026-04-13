@@ -503,7 +503,7 @@ describe('Form Validations & User Feedback Tests', () => {
       expect(screen.queryByText(/pattern|invalid characters/i)).not.toBeInTheDocument();
     });
 
-    test('error messages clear and helpful', () => {
+    test('error messages clear and helpful', async () => {
       render(
         <ThemeProvider>
           <TestForm />
@@ -526,7 +526,7 @@ describe('Form Validations & User Feedback Tests', () => {
       expect(screen.getByText(/valid email/i)).toBeInTheDocument();
     });
 
-    test('field-level error styling', () => {
+    test('field-level error styling', async () => {
       render(
         <ThemeProvider>
           <TestForm />

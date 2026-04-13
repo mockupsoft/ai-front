@@ -102,3 +102,11 @@ main:has(.main-content-wrapper .tasks-layout) {
 .main-content-wrapper:has(.tasks-layout) {
   overflow: hidden !important;
 }
+
+/* DeepSite v2 editor (Monaco decorations + iframe hover) */
+.matched-line {
+  background-color: rgba(34, 197, 94, 0.15);
+}
+.hovered-element {
+  outline: 2px solid rgba(56, 189, 248, 0.6);
+}

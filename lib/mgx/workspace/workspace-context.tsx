@@ -89,10 +89,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   // Backend health check fetcher
   const healthFetcher = useCallback(async (): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE}/health`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await fetch(`${API_BASE}/health/`);
       return response.ok;
     } catch {
       return false;
@@ -405,6 +402,9 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
   }, [health]);
 
   // Auto-select workspace and project when data is available (only once on initial load)
+  // Skip URL updates on /deepsite/* routes — those pages manage their own state
+  const isDeepSiteRoute = pathname?.startsWith('/deepsite');
+
   useEffect(() => {
     if (hasInitialized || !workspaces.length) return;
     
@@ -414,27 +414,27 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       : workspaces[0];
     
     if (workspace) {
-      // Update URL and localStorage without triggering re-fetch
-      const newSearchParams = searchParams 
-        ? new URLSearchParams(searchParams.toString())
-        : new URLSearchParams();
-      newSearchParams.set(WORKSPACE_PARAM, workspace.id);
-      
       if (typeof window !== 'undefined') {
         localStorage.setItem(WORKSPACE_STORAGE_KEY, workspace.id);
       }
       
-      if (router) {
+      // Only push to URL on MGX routes, not on DeepSite routes
+      if (router && !isDeepSiteRoute) {
+        const newSearchParams = searchParams 
+          ? new URLSearchParams(searchParams.toString())
+          : new URLSearchParams();
+        newSearchParams.set(WORKSPACE_PARAM, workspace.id);
         router.push(`${pathname}?${newSearchParams.toString()}`, { scroll: false });
       }
       
       setHasInitialized(true);
     }
-  }, [hasInitialized, workspaces, getInitialSelection, searchParams, router, pathname]);
+  }, [hasInitialized, workspaces, getInitialSelection, searchParams, router, pathname, isDeepSiteRoute]);
 
   // Auto-select project when workspace is selected and projects are available
   useEffect(() => {
     if (!currentWorkspace || currentProject || !projects.length) return;
+    if (isDeepSiteRoute) return; // Skip URL updates on DeepSite routes
     
     const projectId = searchParams?.get(PROJECT_PARAM) || 
                      (typeof window !== 'undefined' ? localStorage.getItem(PROJECT_STORAGE_KEY) : null);
@@ -456,7 +456,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
         router.push(`${pathname}?${newSearchParams.toString()}`, { scroll: false });
       }
     }
-  }, [currentWorkspace, currentProject, projects, searchParams, router, pathname]);
+  }, [currentWorkspace, currentProject, projects, searchParams, router, pathname, isDeepSiteRoute]);
 
   const value: WorkspaceContextType = {
     currentWorkspace,

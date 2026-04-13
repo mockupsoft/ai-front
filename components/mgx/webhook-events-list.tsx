@@ -22,6 +22,7 @@ import {
 import { Spinner } from "@/components/mgx/ui/spinner";
 import { StatusPill } from "@/components/mgx/ui/status-pill";
 import type { WebhookEvent } from "@/lib/types";
+import { formatTimeAgo } from "@/lib/utils";
 import { useWebhookEvents } from "@/hooks/useWebhookEvents";
 
 interface WebhookEventsListProps {

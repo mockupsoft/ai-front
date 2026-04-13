@@ -9,9 +9,9 @@ import { ThemeProvider } from 'next-themes';
 import { Button } from '@/components/mgx/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/mgx/ui/card';
 import { Table, TBody, Td, Th, THead, Tr } from '@/components/mgx/ui/table';
-import Navigation from '@/components/Navigation';
-import TaskList from '@/components/TaskList';
-import Sidebar from '@/components/mgx/sidebar';
+import { Navigation } from '@/components/Navigation';
+import { TaskList } from '@/components/TaskList';
+import { MgxSidebar as Sidebar } from '@/components/mgx/sidebar';
 import Link from 'next/link';
 
 // Mock next-themes
@@ -379,7 +379,7 @@ describe('Responsive Design Tests', () => {
 
       // On mobile, modal should be nearly full width
       const modalWidth = parseFloat(modalStyles.width) || 0;
-      const viewportWidth = width;
+      const viewportWidth = window.innerWidth;
       if (modalWidth > 0) {
         expect(modalWidth).toBeGreaterThan(viewportWidth * 0.9);
       }

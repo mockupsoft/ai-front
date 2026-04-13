@@ -43,10 +43,14 @@ jest.mock("@/lib/api", () => ({
 }));
 
 describe("MgxHeader", () => {
-  const originalEnv = process.env.NODE_ENV;
+  const setNodeEnv = (value: string) =>
+    Object.defineProperty(process.env, "NODE_ENV", {
+      value,
+      configurable: true,
+    });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalEnv;
+    setNodeEnv("test");
   });
 
   it("renders search input", () => {
@@ -80,7 +84,7 @@ describe("MgxHeader", () => {
   });
 
   it("renders environment badge in development", () => {
-    process.env.NODE_ENV = "development";
+    setNodeEnv("development");
     render(
       <WorkspaceProvider>
         <MgxHeader />
@@ -90,7 +94,7 @@ describe("MgxHeader", () => {
   });
 
   it("renders environment badge in production", () => {
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
     render(
       <WorkspaceProvider>
         <MgxHeader />

@@ -119,7 +119,7 @@ export function AppViewer({ files = [], activeFile, className }: AppViewerProps)
           .replace(/body\s*\{[^}]*display\s*:\s*flex[^}]*\}/gi, 'body { display: block !important; }')
           .replace(/body\s*\{[^}]*justify-content\s*:\s*center[^}]*\}/gi, '')
           .replace(/body\s*\{[^}]*align-items\s*:\s*center[^}]*\}/gi, '')
-          .replace(/body\s*\{([^}]*)\}/gi, (bodyMatch, bodyContent) => {
+          .replace(/body\s*\{([^}]*)\}/gi, (_bodyMatch: string, bodyContent: string) => {
             // Remove flex centering from body
             const cleaned = bodyContent
               .replace(/display\s*:\s*flex/g, 'display: block !important')

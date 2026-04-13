@@ -28,7 +28,7 @@ describe("ActivityFeed", () => {
     const mockEvents = [
       {
         id: "commit_abc123",
-        type: "commit",
+        type: "commit" as const,
         timestamp: "2024-01-01T12:00:00Z",
         actor: "test-user",
         title: "Test commit",

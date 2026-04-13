@@ -30,7 +30,7 @@ describe("IssuesList", () => {
         number: 1,
         title: "Test Issue",
         body: "Test body",
-        state: "open",
+        state: "open" as const,
         html_url: "https://github.com/test/repo/issues/1",
         created_at: "2024-01-01T12:00:00Z",
         updated_at: "2024-01-01T12:00:00Z",

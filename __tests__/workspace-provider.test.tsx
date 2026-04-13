@@ -8,6 +8,8 @@ import { WorkspaceProvider, useWorkspace } from "@/lib/mgx/workspace/workspace-c
 import { fetcher } from "@/lib/api";
 import type { Workspace, Project } from "@/lib/types/workspace";
 
+type AnyFn = (...args: unknown[]) => unknown;
+
 // Mock the API
 jest.mock("@/lib/api", () => ({
   fetcher: jest.fn(),
@@ -39,6 +41,7 @@ describe("WorkspaceProvider", () => {
   const mockWorkspaces: Workspace[] = [
     {
       id: "ws-1",
+      slug: "development-workspace",
       name: "Development Workspace",
       description: "Main development workspace",
       createdAt: "2024-01-01T00:00:00Z",
@@ -48,6 +51,7 @@ describe("WorkspaceProvider", () => {
     },
     {
       id: "ws-2",
+      slug: "production-workspace",
       name: "Production Workspace",
       description: "Production environment",
       createdAt: "2024-01-01T00:00:00Z",
@@ -102,9 +106,9 @@ describe("WorkspaceProvider", () => {
   });
 
   it("should initialize with empty state", async () => {
-    (fetcher as jest.Mock).mockImplementation((path: string) => {
+    (fetcher as jest.MockedFunction<AnyFn>).mockImplementation((path: unknown) => {
       if (path === "/workspaces") return Promise.resolve(mockWorkspaces);
-      if (path.includes("workspace_id=")) return Promise.resolve(mockProjects);
+      if ((path as string).includes("workspace_id=")) return Promise.resolve(mockProjects);
       return Promise.reject(new Error("Unknown path"));
     });
 
@@ -149,10 +153,10 @@ describe("WorkspaceProvider", () => {
   });
 
   it("should select a different workspace", async () => {
-    (fetcher as jest.Mock).mockImplementation((path: string) => {
+    (fetcher as jest.MockedFunction<AnyFn>).mockImplementation((path: unknown) => {
       if (path === "/workspaces") return Promise.resolve(mockWorkspaces);
-      if (path.includes("workspace_id=ws-1")) return Promise.resolve(mockProjects);
-      if (path.includes("workspace_id=ws-2")) return Promise.resolve([]);
+      if ((path as string).includes("workspace_id=ws-1")) return Promise.resolve(mockProjects);
+      if ((path as string).includes("workspace_id=ws-2")) return Promise.resolve([]);
       return Promise.reject(new Error("Unknown path"));
     });
 
@@ -200,7 +204,7 @@ describe("WorkspaceProvider", () => {
   });
 
   it("should handle loading states", async () => {
-    (fetcher as jest.Mock).mockImplementation((path: string) => {
+    (fetcher as jest.MockedFunction<AnyFn>).mockImplementation((path: unknown) => {
       if (path === "/workspaces") {
         return new Promise((resolve) => {
           setTimeout(() => {
@@ -208,7 +212,7 @@ describe("WorkspaceProvider", () => {
           }, 100);
         });
       }
-      if (path.includes("workspace_id=")) {
+      if ((path as string).includes("workspace_id=")) {
         return new Promise((resolve) => {
           setTimeout(() => {
             resolve(mockProjects);
@@ -255,7 +259,7 @@ describe("WorkspaceProvider", () => {
   });
 
   it("should handle errors gracefully", async () => {
-    (fetcher as jest.Mock).mockRejectedValue(new Error("Failed to fetch"));
+    (fetcher as jest.MockedFunction<AnyFn>).mockRejectedValue(new Error("Failed to fetch") as never);
 
     const TestComponent = () => {
       const { error } = useWorkspace();
@@ -285,9 +289,9 @@ describe("WorkspaceProvider", () => {
     localStorageMock.getItem.mockReturnValueOnce(null); // workspace
     localStorageMock.getItem.mockReturnValueOnce("proj-1"); // project
 
-    (fetcher as jest.Mock).mockImplementation((path: string) => {
+    (fetcher as jest.MockedFunction<AnyFn>).mockImplementation((path: unknown) => {
       if (path === "/workspaces") return Promise.resolve(mockWorkspaces);
-      if (path.includes("workspace_id=ws-1")) return Promise.resolve(mockProjects);
+      if ((path as string).includes("workspace_id=ws-1")) return Promise.resolve(mockProjects);
       return Promise.reject(new Error("Unknown path"));
     });
 

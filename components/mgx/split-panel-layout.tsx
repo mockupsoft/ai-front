@@ -36,7 +36,7 @@ export function SplitPanelLayout({
       }}
     >
       <PanelGroup 
-        direction="horizontal" 
+        orientation="horizontal" 
         style={{ 
           display: 'flex',
           flex: 1, 
